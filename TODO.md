@@ -26,7 +26,7 @@
 - [ ] Datenbank/Caching evaluieren (`PostgreSQL + Prisma`, optional TimescaleDB).
 - [ ] Observability planen (strukturierte Logs, Fehlertracking, Metriken).
 - [ ] Accessibility-Review durchführen (Kontraste, Keyboard, Screenreader-Basis).
-- [ ] Deployment-Dokumentation ergänzen (wenn Hosting feststeht).
+- [x] Deployment-Dokumentation ergänzen (Docker Compose Basis für stabilen Betrieb).
 
 ## Backlog (Process / Team, erst bei Bedarf)
 

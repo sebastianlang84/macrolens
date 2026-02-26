@@ -9,6 +9,7 @@
 - Node-Version gepinnt via `apps/web/.nvmrc` und Minimal-CI (`.github/workflows/ci.yml`) für `lint`/`test`/`build` hinzugefügt.
 - README erweitert um Mermaid-Architekturdiagramm, MVP-Caching-Strategie und Rate-Limit-/Abuse-Schutz-Plan.
 - P2-Ausbau erweitert: zusätzliche FRED-Serien (`CPI`, `UNRATE`, `UST 2Y/10Y`, `IG OAS`, `HY OAS`) und neue Signale (Yield Curve, Inflation, Arbeitslosenquote, Credit-Regime) integriert.
+- Docker-Basis ergänzt (`apps/web/Dockerfile`, `docker-compose.yml`) mit `restart: unless-stopped` für stabilen Linux-Betrieb.
 - Audit-Checklisten in `docs/audits/` wurden auf konsistentes Namensschema umgestellt; umsetzbare Findings sind in `TODO.md` priorisiert.
 
 ## Long-Term Memory

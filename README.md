@@ -56,6 +56,37 @@ npm run dev
 - `http://localhost:3000` (UI)
 - `http://localhost:3000/api/dashboard` (JSON-API)
 
+## Docker (empfohlen fuer stabilen Dauerbetrieb)
+
+Im Repo-Root:
+
+```bash
+docker compose up -d --build
+```
+
+Stoppen:
+
+```bash
+docker compose down
+```
+
+Logs:
+
+```bash
+docker compose logs -f web
+```
+
+Hinweis zu FRED:
+- `FRED_API_KEY` kommt in die Shell-Umgebung vor dem Start, z. B.:
+
+```bash
+export FRED_API_KEY=dein_key
+docker compose up -d --build
+```
+
+Das Compose-Setup nutzt `restart: unless-stopped`, damit der Container nach Reboots wieder hochkommt.
+Hinweis: Auf dem Linux-Host wird die App absichtlich auf `127.0.0.1:3001` veröffentlicht, damit bestehende Dienste auf Port `3000` nicht gestört werden.
+
 ## Qualitäts-Checks (lokal)
 
 ```bash

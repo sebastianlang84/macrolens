@@ -7,6 +7,8 @@
 - `AGENTS.md` -> Arbeitsregeln für Coding Agents
 
 ## App Code (Startpunkte)
+- `docker-compose.yml` -> Docker-Orchestrierung fuer stabilen Betrieb auf Linux
+- `apps/web/Dockerfile` -> Container-Build der Next.js-App
 - `apps/web/src/app/page.tsx` -> Server-Komponente, lädt Dashboard-Daten
 - `apps/web/src/app/api/dashboard/route.ts` -> JSON API des Dashboards
 - `apps/web/src/lib/dashboard-data.ts` -> Aggregation aller Datenquellen
