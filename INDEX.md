@@ -5,6 +5,8 @@
 - `MEMORY.md` -> Stabiler Snapshot / Entscheidungen / Risiken
 - `TODO.md` -> Priorisierte nächste Arbeiten / Audit-Follow-ups
 - `AGENTS.md` -> Arbeitsregeln für Coding Agents
+- `docs/evaluation-db-caching.md` -> Datenbank- & Caching-Strategie
+- `docs/git-workflow.md` -> Git-Branching & Commit-Konventionen
 
 ## App Code (Startpunkte)
 - `docker-compose.yml` -> Docker-Orchestrierung fuer stabilen Betrieb auf Linux

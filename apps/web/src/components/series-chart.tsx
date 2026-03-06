@@ -10,22 +10,36 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatPctDelta, formatValueByUnit } from "@/lib/formatters";
+import { type ChartScaleMode } from "@/lib/series-analysis";
+import { formatNumber, formatPctDelta, formatValueByUnit } from "@/lib/formatters";
 import type { MacroSeries } from "@/types/macro";
 
 type Props = {
   series: MacroSeries;
+  scaleMode: ChartScaleMode;
+  yAutoScale: boolean;
 };
 
-function toChartData(series: MacroSeries) {
-  return series.points.map((point) => ({
-    ...point,
-    dateLabel: format(parseISO(point.date), "MMM yy"),
-  }));
+function toChartData(series: MacroSeries, scaleMode: ChartScaleMode) {
+  const firstValue = series.points[0]?.value;
+  const canScaleToOne =
+    scaleMode === "index1" &&
+    firstValue !== undefined &&
+    Number.isFinite(firstValue) &&
+    firstValue !== 0;
+
+  return series.points.map((point) => {
+    const chartValue = canScaleToOne ? point.value / (firstValue as number) : point.value;
+    return {
+      ...point,
+      chartValue,
+      dateLabel: format(parseISO(point.date), "MMM yy"),
+    };
+  });
 }
 
-export function SeriesChart({ series }: Props) {
-  const chartData = toChartData(series);
+export function SeriesChart({ series, scaleMode, yAutoScale }: Props) {
+  const chartData = toChartData(series, scaleMode);
 
   return (
     <article className="rounded-2xl border border-white/10 bg-white/70 p-4 shadow-sm ring-1 ring-black/5 backdrop-blur md:p-5">
@@ -76,10 +90,14 @@ export function SeriesChart({ series }: Props) {
               />
               <YAxis
                 width={56}
+                domain={yAutoScale ? ["auto", "auto"] : [0, "auto"]}
                 tick={{ fontSize: 11, fill: "#64748b" }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value: number) => {
+                  if (scaleMode === "index1") {
+                    return `${formatNumber(value, 2)}x`;
+                  }
                   if (Math.abs(value) >= 1000) {
                     return `${Math.round(value / 1000)}k`;
                   }
@@ -88,7 +106,11 @@ export function SeriesChart({ series }: Props) {
               />
               <Tooltip
                 formatter={(value: number | string | undefined) =>
-                  typeof value === "number" ? formatValueByUnit(value, series.unit) : "n/a"
+                  typeof value === "number"
+                    ? scaleMode === "index1"
+                      ? `${formatNumber(value, 3)}x`
+                      : formatValueByUnit(value, series.unit)
+                    : "n/a"
                 }
                 contentStyle={{
                   borderRadius: "0.75rem",
@@ -99,7 +121,7 @@ export function SeriesChart({ series }: Props) {
               />
               <Line
                 type="monotone"
-                dataKey="value"
+                dataKey="chartValue"
                 stroke={series.color}
                 strokeWidth={2}
                 dot={false}

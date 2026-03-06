@@ -1,8 +1,10 @@
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 import { computeSeriesStats } from "@/lib/stats";
 import type { SeriesSpec } from "@/lib/series-catalog";
 import type { MacroSeries, TimePoint } from "@/types/macro";
 import { z } from "zod";
+
+const yahooFinance = new YahooFinance();
 
 const yahooQuoteSchema = z.object({
   date: z.date().optional(),

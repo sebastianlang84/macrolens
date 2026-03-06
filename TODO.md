@@ -23,13 +23,13 @@
 - [x] Weitere FRED-Serien hinzufügen (z. B. `CPIAUCSL`, `UNRATE`, `DGS10`, `DGS2`).
 - [x] Yield-Curve- und Inflations-/Arbeitsmarkt-Signale in `apps/web/src/lib/macro-derivations.ts` ergänzen.
 - [x] Credit-Signale ergänzen (z. B. HY-/IG-Spreads oder Credit-Spread-Proxies).
-- [ ] Datenbank/Caching evaluieren (`PostgreSQL + Prisma`, optional TimescaleDB).
-- [ ] Observability planen (strukturierte Logs, Fehlertracking, Metriken).
-- [ ] Accessibility-Review durchführen (Kontraste, Keyboard, Screenreader-Basis).
+- [x] Datenbank/Caching evaluieren (`PostgreSQL + Prisma`, optional TimescaleDB) – *Evaluation in docs/evaluation-db-caching.md*.
+- [x] Observability planen (strukturierte Logs, Fehlertracking, Metriken) – *Basis-Timing-Logging integriert*.
+- [x] Accessibility-Review durchführen (Kontraste, Keyboard, Screenreader-Basis) – *Schriftgrößen & ARIA-Roles optimiert*.
 - [x] Deployment-Dokumentation ergänzen (Docker Compose Basis für stabilen Betrieb).
 
 ## Backlog (Process / Team, erst bei Bedarf)
 
-- [ ] Git-Workflow dokumentieren (Branching, PR-Regeln, Commit-Konvention).
+- [x] Git-Workflow dokumentieren (Branching, PR-Regeln, Commit-Konvention) – *In docs/git-workflow.md*.
 - [ ] `CODEOWNERS`/PR-Templates einführen (wenn mehrere Personen aktiv beitragen).
 - [ ] Secret-Scanning integrieren (z. B. `gitleaks`) falls Repo wächst.
