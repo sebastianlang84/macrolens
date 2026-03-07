@@ -35,6 +35,7 @@
 - S&P 500 Equal Weight wird aktuell über `RSP` (ETF) als Proxy modelliert.
 - Ziel ist Lernen + Verständnis: Architektur und Begriffe sind Teil des Outputs, nicht nur UI.
 - Nutzerpräferenz: Prinzipienverständnis vor Code; Erklärungen ohne Coding-Beispiele bevorzugt.
+- Sicherheitsregel 2026-03-07: Bei Freischaltungen/Allowlists/Skills/Plugins nie von einzelnen Beispielen auf einen Voll-Enable schließen. Es gilt ausschließlich der explizit vom Nutzer genannte Scope; Überschreitungen sind sofort zurückzubauen und als Lernregel festzuhalten.
 
 ## Open Decisions
 - Datenbank ja/nein (Caching/Historisierung) in späterem Schritt.

@@ -1,51 +1,59 @@
 # AGENTS.md
 
-Projektziel: Lernorientiertes Makro-Dashboard mit `Next.js`, `TypeScript`, FRED/Yahoo-Daten und Charts.
+Project goal: Learning-oriented macro dashboard with `Next.js`, `TypeScript`, FRED/Yahoo data, and charts.
 
 ## Non-Negotiables
-- Vor Änderungen zuerst lesen/verstehen (`README.md`, `INDEX.md`, `MEMORY.md`, betroffene Dateien).
-- Kleine, reviewbare Diffs; keine unnötigen Refactors.
-- API-Keys nie committen (`.env.local` lokal verwenden).
-- Änderungen immer verifizieren (`npm run lint`, ggf. `npm run build`).
-- Keine Topologie-/Infrastruktur-Annahmen ohne lokalen Nachweis aus laufendem System (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
+- Read and understand first before making changes (`README.md`, `INDEX.md`, `MEMORY.md`, affected files).
+- Keep diffs small and reviewable; avoid unnecessary refactors.
+- Never commit API keys; use local `.env.local`.
+- Always verify changes (`npm run lint`, and `npm run build` when needed).
+- Do not make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
 
 ## Memory Routing
-- Stabiler Projektstatus / offene Entscheidungen: `MEMORY.md`
-- Bedienung / Setup: `README.md`
+- Stable project state and open decisions: `MEMORY.md`
+- Usage and setup: `README.md`
 - Navigation: `INDEX.md`
-- Tägliche Notizen / Verlauf: `agents/memory/daily/*`
+- Daily notes and history: `agents/memory/daily/*`
 
-## Definition of Done (Pflicht)
-- Ein Task gilt erst als abgeschlossen, wenn alle zutreffenden Punkte erledigt sind:
-- Fachlicher Fix/Änderung ist umgesetzt.
-- Verifikation ist durchgeführt (`npm run lint`, bei Bedarf `npm run build`, plus Laufzeitcheck bei Ops-Themen).
-- Erkenntnisse sind persistent dokumentiert:
-- Stabiler Stand/Regel in `MEMORY.md`.
-- Zeitlicher Verlauf/Incident in `agents/memory/daily/<YYYY-MM-DD>-*.md`.
-- Bei wiederkehrenden Ops-Problemen ist ein kurzes Runbook in `README.md` oder `MEMORY.md` ergänzt/aktualisiert.
+## Definition of Done
+- The functional fix or change is implemented.
+- Verification is completed (`npm run lint`, `npm run build` when needed, plus runtime checks for ops topics).
+- Stable state or rule is documented in `MEMORY.md`.
+- Time-based history or incident is documented in `agents/memory/daily/<YYYY-MM-DD>-*.md`.
+- For recurring ops issues, add or update a short runbook in `README.md` or `MEMORY.md`.
 
-## Incident Workflow (Pflicht bei 4xx/5xx/Ops-Ausfällen)
-- Immer in dieser Reihenfolge arbeiten:
-1. Symptom konkret messen (z. B. `curl -I` mit Statuscode).
-2. First Checks im betroffenen Laufzeitkontext ausführen.
-3. Root Cause benennen (kein Blind-Fix).
-4. Fix umsetzen.
-5. Extern und intern verifizieren.
-6. Memory-Writeback durchführen (`MEMORY.md` + Daily Note).
+## Incident Workflow
+1. Measure the symptom concretely (for example `curl -I` with status code).
+2. Run first checks in the affected runtime context.
+3. Name the root cause; do not blind-fix.
+4. Implement the fix.
+5. Verify externally and internally.
+6. Write back to memory (`MEMORY.md` and daily note).
 
-## First Checks fuer dieses Setup (Pflicht bei MacroLens-HTTP-Fehlern)
-- `docker compose ps` im Repo ausführen und Zustand von `web` prüfen.
-- Lokal verifizieren: `curl -I http://127.0.0.1:3001`.
-- Bei Bedarf Logs: `docker compose logs --tail=200 web`.
-- Erst danach weitere Hypothesen (DNS, Clients, Tunnel) verfolgen.
-- `openclaw/owui`-Routing (ai_stack) nicht anfassen, ausser der User fordert es explizit.
+## First Checks for This Setup
+- Run `docker compose ps` in the repo and inspect the state of `web`.
+- Verify locally with `curl -I http://127.0.0.1:3001`.
+- If needed, inspect logs with `docker compose logs --tail=200 web`.
+- Only after that, pursue further hypotheses such as DNS, clients, or tunnels.
+- Do not touch `openclaw/owui` routing (`ai_stack`) unless the user explicitly asks for it.
 
 ## Assumption Guardrails
-- Keine Aussagen wie "Host X ist extern/anderer Rechner", bevor `tailscale status --json` und Container-/Netzwerkdaten geprüft sind.
-- Bei Unsicherheit zuerst Messdaten liefern, dann Schlussfolgerung.
-- Frühere Fehlannahmen im selben Turn aktiv korrigieren und in Memory festhalten.
+- Do not claim things like "Host X is external / another machine" before checking `tailscale status --json` and container or network data.
+- When unsure, provide measurements first and conclusions second.
+- Actively correct earlier false assumptions in the same turn and record them in memory.
+
+## Safety Guardrails
+- Change allowlists, plugins, skills, tokens, routing, and other security-relevant settings only within the exact scope explicitly named by the user.
+- No bulk enabling, no generalization from examples, and no expansion to similar entries without explicit approval.
+- If changes already exceeded the allowed scope, stop immediately, name the error precisely, restore the exact requested state, and only then continue.
+
+## Behavior and Character
+- Be short, precise, and reviewable.
+- When unsure, measure instead of guessing.
+- Learn from mistakes: name them, roll them back, derive a rule, document it.
+- Use initiative only within the user's explicit scope.
 
 ## Working Style
-- Server-seitiges Daten-Fetching bevorzugen, wenn Secrets beteiligt sind.
-- Neue Datenquellen erst normalisieren, dann UI bauen.
-- Makro-Ableitungen als nachvollziehbare Heuristiken formulieren (keine Blackbox).
+- Prefer server-side data fetching when secrets are involved.
+- Normalize new data sources first, then build UI.
+- Express macro inferences as understandable heuristics, not black boxes.
