@@ -1,6 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfWeek } from "date-fns";
 import { computeSeriesStats } from "@/lib/stats";
-import type { MacroSeries, TimePoint } from "@/types/macro";
+import type { CandlePoint, MacroSeries, TimePoint } from "@/types/macro";
 
 export type ChartScaleMode = "index1" | "raw";
 export type YScaleMode = "shared" | "separate";
@@ -34,10 +34,17 @@ export const ASSET_SERIES_KEYS = new Set([
   "oil",
 ]);
 
-export const RSI_SWEEP_WINDOWS = [5, 7, 10, 14, 20, 30, 45, 70, 100, 150, 200, 300] as const;
-
-const RSI_SWEEP_SHORT_WINDOWS = [5, 7, 10, 14, 20];
-const RSI_SWEEP_LONG_WINDOWS = [70, 100, 150, 200, 300];
+const RSI_PERIOD = 14;
+const RSI_SCORE_WINDOW = 14;
+const RSI_SCORE_SMOOTHING = 5;
+const RSI_SCORE_PRICE_WEIGHT = 1;
+const RSI_SCORE_SCALE = 1.5;
+const SCORE_CENTER = 50;
+const SCORE_MULTIPLIER = 0.35;
+const BULLISH_SCORE_THRESHOLD = SCORE_CENTER + 20 * SCORE_MULTIPLIER;
+const BEARISH_SCORE_THRESHOLD = SCORE_CENTER - 20 * SCORE_MULTIPLIER;
+const DAILY_DIVERGENCE_PIVOT = { left: 3, right: 5 } as const;
+const WEEKLY_DIVERGENCE_PIVOT = { left: 3, right: 3 } as const;
 
 function mean(values: number[]): number | null {
   if (values.length === 0) {
@@ -94,31 +101,60 @@ function createDerivedSeries(
   };
 }
 
-function buildResampledCloseSeries(series: MacroSeries, timeframe: "week"): MacroSeries | null {
+function toWeekStart(date: string): string {
+  return format(startOfWeek(parseISO(date), { weekStartsOn: 1 }), "yyyy-MM-dd");
+}
+
+export function buildWeeklySeries(series: MacroSeries): MacroSeries | null {
   if (series.points.length === 0) {
     return null;
   }
 
-  const buckets = new Map<string, TimePoint>();
+  const candleBuckets = new Map<string, CandlePoint>();
+  if ((series.candles?.length ?? 0) > 0) {
+    for (const candle of series.candles ?? []) {
+      const bucketKey = toWeekStart(candle.date);
+      const existing = candleBuckets.get(bucketKey);
+      if (!existing) {
+        candleBuckets.set(bucketKey, {
+          date: bucketKey,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+        });
+        continue;
+      }
 
-  for (const point of series.points) {
-    const bucketKey =
-      timeframe === "week" ? format(parseISO(point.date), "RRRR-'W'II") : point.date;
-    buckets.set(bucketKey, point);
+      existing.high = Math.max(existing.high, candle.high);
+      existing.low = Math.min(existing.low, candle.low);
+      existing.close = candle.close;
+    }
   }
 
-  const resampledPoints = [...buckets.values()];
-  if (resampledPoints.length === 0) {
+  const pointBuckets = new Map<string, TimePoint>();
+  for (const point of series.points) {
+    pointBuckets.set(toWeekStart(point.date), {
+      date: toWeekStart(point.date),
+      value: point.value,
+    });
+  }
+
+  const weeklyCandles = [...candleBuckets.values()].sort((left, right) => left.date.localeCompare(right.date));
+  const weeklyPoints = [...pointBuckets.values()].sort((left, right) => left.date.localeCompare(right.date));
+
+  if (weeklyPoints.length === 0) {
     return null;
   }
 
   return {
     ...series,
-    key: `${series.key}:${timeframe}`,
-    label: `${series.label} ${timeframe === "week" ? "Weekly" : timeframe}`,
-    shortLabel: `${series.shortLabel} ${timeframe === "week" ? "W" : timeframe}`,
-    points: resampledPoints,
-    stats: computeSeriesStats(resampledPoints),
+    key: `${series.key}:week`,
+    label: `${series.label} Weekly`,
+    shortLabel: `${series.shortLabel} W`,
+    points: weeklyPoints,
+    candles: weeklyCandles.length > 0 ? weeklyCandles : undefined,
+    stats: computeSeriesStats(weeklyPoints),
   };
 }
 
@@ -126,7 +162,7 @@ export function isAssetSeries(series: MacroSeries): boolean {
   return ASSET_SERIES_KEYS.has(series.key);
 }
 
-export function buildRsiSeries(series: MacroSeries, period = 14): MacroSeries | null {
+function computeBaseRsiSeries(series: MacroSeries, period = RSI_PERIOD): MacroSeries | null {
   if (series.points.length <= period) {
     return null;
   }
@@ -165,7 +201,7 @@ export function buildRsiSeries(series: MacroSeries, period = 14): MacroSeries | 
 
   return createDerivedSeries(
     series,
-    `rsi${period}:${series.key}`,
+    `rsi-internal:${period}:${series.key}`,
     `RSI ${period} (${series.label})`,
     `RSI ${period} (${series.shortLabel})`,
     `${period}-Perioden RSI, abgeleitet aus ${series.shortLabel}.`,
@@ -174,58 +210,254 @@ export function buildRsiSeries(series: MacroSeries, period = 14): MacroSeries | 
   );
 }
 
-export function buildWeeklyRsiSeries(series: MacroSeries, period = 14): MacroSeries | null {
-  const weeklySeries = buildResampledCloseSeries(series, "week");
+function computeAtrSeries(series: MacroSeries, period: number): TimePoint[] {
+  const candles = series.candles ?? [];
+  if (candles.length <= period) {
+    return [];
+  }
+
+  const trueRanges: Array<{ date: string; value: number }> = [];
+  for (let index = 1; index < candles.length; index += 1) {
+    const current = candles[index];
+    const previous = candles[index - 1];
+    const trueRange = Math.max(
+      current.high - current.low,
+      Math.abs(current.high - previous.close),
+      Math.abs(current.low - previous.close),
+    );
+    trueRanges.push({ date: current.date, value: trueRange });
+  }
+
+  if (trueRanges.length < period) {
+    return [];
+  }
+
+  let atr = trueRanges.slice(0, period).reduce((sum, entry) => sum + entry.value, 0) / period;
+  const atrPoints: TimePoint[] = [{ date: trueRanges[period - 1].date, value: atr }];
+
+  for (let index = period; index < trueRanges.length; index += 1) {
+    atr = (atr * (period - 1) + trueRanges[index].value) / period;
+    atrPoints.push({
+      date: trueRanges[index].date,
+      value: atr,
+    });
+  }
+
+  return atrPoints;
+}
+
+function tanh(value: number): number {
+  const exp = Math.exp(value);
+  const negExp = Math.exp(-value);
+  return (exp - negExp) / (exp + negExp);
+}
+
+function computeRegressionEndpoint(values: number[]): number | null {
+  if (values.length < 2) {
+    return null;
+  }
+
+  const n = values.length;
+  const meanX = (n - 1) / 2;
+  const meanY = values.reduce((sum, value) => sum + value, 0) / n;
+  let numerator = 0;
+  let denominator = 0;
+
+  for (let index = 0; index < n; index += 1) {
+    const deltaX = index - meanX;
+    numerator += deltaX * (values[index] - meanY);
+    denominator += deltaX * deltaX;
+  }
+
+  if (denominator === 0) {
+    return null;
+  }
+
+  const slope = numerator / denominator;
+  const intercept = meanY - slope * meanX;
+  return intercept + slope * (n - 1);
+}
+
+function computeEma(values: number[], period: number): number[] {
+  if (values.length === 0) {
+    return [];
+  }
+
+  const multiplier = 2 / (period + 1);
+  const result = [values[0]];
+
+  for (let index = 1; index < values.length; index += 1) {
+    result.push(values[index] * multiplier + result[index - 1] * (1 - multiplier));
+  }
+
+  return result;
+}
+
+type RsiScoreSeriesResult = {
+  scoreSeries: MacroSeries;
+  rsiSeries: MacroSeries;
+};
+
+function buildRsiScoreSeriesForInput(
+  inputSeries: MacroSeries,
+  outputBaseSeries: MacroSeries,
+  keyPrefix: "rsi-score" | "rsi-scorew",
+  labelSuffix: string,
+  shortLabelSuffix: string,
+  color: string,
+): RsiScoreSeriesResult | null {
+  const rsiSeries = computeBaseRsiSeries(inputSeries, RSI_PERIOD);
+  if (!rsiSeries) {
+    return null;
+  }
+
+  const atrMap = new Map(computeAtrSeries(inputSeries, RSI_PERIOD).map((point) => [point.date, point.value]));
+  const scoreInputs: Array<{ date: string; value: number }> = [];
+
+  for (let index = RSI_SCORE_WINDOW; index < rsiSeries.points.length; index += 1) {
+    const currentWindow = rsiSeries.points.slice(index - RSI_SCORE_WINDOW + 1, index + 1);
+    const previousWindow = rsiSeries.points.slice(index - RSI_SCORE_WINDOW, index);
+    const currentRsiReg = computeRegressionEndpoint(currentWindow.map((point) => point.value));
+    const previousRsiReg = computeRegressionEndpoint(previousWindow.map((point) => point.value));
+    if (currentRsiReg === null || previousRsiReg === null) {
+      continue;
+    }
+
+    const windowDates = currentWindow.map((point) => point.date);
+    const inputWindowValues = windowDates.map((date) =>
+      inputSeries.points.find((point) => point.date === date)?.value,
+    );
+    if (inputWindowValues.some((value) => value === undefined)) {
+      continue;
+    }
+
+    const currentPriceReg = computeRegressionEndpoint(inputWindowValues as number[]);
+    const previousPriceReg = computeRegressionEndpoint(
+      previousWindow.map((point) => inputSeries.points.find((entry) => entry.date === point.date)?.value as number),
+    );
+    if (currentPriceReg === null || previousPriceReg === null) {
+      continue;
+    }
+
+    const rsiStd = stdev(currentWindow.map((point) => point.value));
+    const atr = atrMap.get(currentWindow.at(-1)?.date ?? "");
+    if (atr === undefined || rsiStd === null) {
+      continue;
+    }
+
+    const safeAtr = Math.max(atr, Number.EPSILON);
+    const safeRsiStd = Math.max(rsiStd, 0.0001);
+    const priceSlopeNorm = (currentPriceReg - previousPriceReg) / safeAtr;
+    const rsiSlopeNorm = (currentRsiReg - previousRsiReg) / safeRsiStd;
+    const rawScore = rsiSlopeNorm - RSI_SCORE_PRICE_WEIGHT * priceSlopeNorm;
+    const score = 100 * tanh(rawScore / RSI_SCORE_SCALE);
+
+    scoreInputs.push({
+      date: currentWindow.at(-1)?.date ?? "",
+      value: score,
+    });
+  }
+
+  const smoothedValues = computeEma(
+    scoreInputs.map((point) => point.value),
+    RSI_SCORE_SMOOTHING,
+  );
+  const scorePoints = scoreInputs.map((point, index) => ({
+    date: point.date,
+    value: SCORE_CENTER + smoothedValues[index] * SCORE_MULTIPLIER,
+  }));
+
+  return {
+    scoreSeries: createDerivedSeries(
+      outputBaseSeries,
+      `${keyPrefix}:${outputBaseSeries.key}`,
+      `RSI Score${labelSuffix} (${outputBaseSeries.label})`,
+      `RSI Score${shortLabelSuffix} (${outputBaseSeries.shortLabel})`,
+      "Um 50 zentrierter Momentum-Divergenz-Score aus RSI- und Preis-Regressionen; oberhalb von 50 heisst Momentum staerker als die Preisaktion.",
+      color,
+      scorePoints,
+    ),
+    rsiSeries,
+  };
+}
+
+export function buildRsiScoreSeries(series: MacroSeries): MacroSeries | null {
+  return buildRsiScoreSeriesForInput(
+    series,
+    series,
+    "rsi-score",
+    "",
+    "",
+    "#2563eb",
+  )?.scoreSeries ?? null;
+}
+
+export function buildWeeklyRsiScoreSeries(series: MacroSeries): MacroSeries | null {
+  const weeklySeries = buildWeeklySeries(series);
   if (!weeklySeries) {
     return null;
   }
 
-  const weeklyRsi = buildRsiSeries(weeklySeries, period);
-  if (!weeklyRsi) {
-    return null;
-  }
-
-  return createDerivedSeries(
+  return buildRsiScoreSeriesForInput(
+    weeklySeries,
     series,
-    `rsi${period}w:${series.key}`,
-    `RSI ${period}W (${series.label})`,
-    `RSI ${period}W (${series.shortLabel})`,
-    `${period}-Wochen RSI, aus resampleten Wochen-Schlusskursen von ${series.shortLabel}.`,
+    "rsi-scorew",
+    " W",
+    " W",
     "#0f766e",
-    weeklyRsi.points,
+  )?.scoreSeries ?? null;
+}
+
+export function buildRsiScoreIndicators(series: MacroSeries): MacroSeries[] {
+  return [buildRsiScoreSeries(series), buildWeeklyRsiScoreSeries(series)].filter(
+    (entry): entry is MacroSeries => entry !== null && entry.points.length > 0,
   );
 }
 
 function alignSeriesByDate(
   assetSeries: MacroSeries,
   indicatorSeries: MacroSeries,
-): Array<{ date: string; assetValue: number; indicatorValue: number }> {
+): Array<{ date: string; priceLow: number; priceHigh: number; indicatorValue: number }> {
   const indicatorValues = new Map(indicatorSeries.points.map((point) => [point.date, point.value]));
+  const candleValues = new Map(
+    (assetSeries.candles ?? []).map((candle) => [
+      candle.date,
+      { low: candle.low, high: candle.high },
+    ]),
+  );
 
   return assetSeries.points
     .filter((point) => indicatorValues.has(point.date))
     .map((point) => ({
       date: point.date,
-      assetValue: point.value,
+      priceLow: candleValues.get(point.date)?.low ?? point.value,
+      priceHigh: candleValues.get(point.date)?.high ?? point.value,
       indicatorValue: indicatorValues.get(point.date) as number,
     }))
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
 function isPivotLow(
-  points: Array<{ assetValue: number }>,
+  points: Array<{ indicatorValue: number }>,
   index: number,
-  radius = 2,
+  leftRadius: number,
+  rightRadius: number,
 ): boolean {
-  const target = points[index]?.assetValue;
+  const target = points[index]?.indicatorValue;
   if (target === undefined) {
     return false;
   }
 
-  for (let offset = 1; offset <= radius; offset += 1) {
-    const left = points[index - offset]?.assetValue;
-    const right = points[index + offset]?.assetValue;
-    if (left === undefined || right === undefined || target > left || target > right) {
+  for (let offset = 1; offset <= leftRadius; offset += 1) {
+    const left = points[index - offset]?.indicatorValue;
+    if (left === undefined || target >= left) {
+      return false;
+    }
+  }
+
+  for (let offset = 1; offset <= rightRadius; offset += 1) {
+    const right = points[index + offset]?.indicatorValue;
+    if (right === undefined || target > right) {
       return false;
     }
   }
@@ -234,19 +466,26 @@ function isPivotLow(
 }
 
 function isPivotHigh(
-  points: Array<{ assetValue: number }>,
+  points: Array<{ indicatorValue: number }>,
   index: number,
-  radius = 2,
+  leftRadius: number,
+  rightRadius: number,
 ): boolean {
-  const target = points[index]?.assetValue;
+  const target = points[index]?.indicatorValue;
   if (target === undefined) {
     return false;
   }
 
-  for (let offset = 1; offset <= radius; offset += 1) {
-    const left = points[index - offset]?.assetValue;
-    const right = points[index + offset]?.assetValue;
-    if (left === undefined || right === undefined || target < left || target < right) {
+  for (let offset = 1; offset <= leftRadius; offset += 1) {
+    const left = points[index - offset]?.indicatorValue;
+    if (left === undefined || target <= left) {
+      return false;
+    }
+  }
+
+  for (let offset = 1; offset <= rightRadius; offset += 1) {
+    const right = points[index + offset]?.indicatorValue;
+    if (right === undefined || target < right) {
       return false;
     }
   }
@@ -259,39 +498,57 @@ export function buildRsiDivergenceMarkers(
   indicatorSeries: MacroSeries,
 ): DivergenceMarker[] {
   const isSupportedIndicator =
-    indicatorSeries.key.startsWith("rsi14:") || indicatorSeries.key.startsWith("rsi14w:");
+    indicatorSeries.key.startsWith("rsi-score:") || indicatorSeries.key.startsWith("rsi-scorew:");
 
   if (!isSupportedIndicator) {
     return [];
   }
 
-  const weeklyAssetSeries = indicatorSeries.key.startsWith("rsi14w:")
-    ? buildResampledCloseSeries(assetSeries, "week")
-    : null;
-  const priceSeries = weeklyAssetSeries ?? assetSeries;
+  const isWeekly = indicatorSeries.key.startsWith("rsi-scorew:");
+  const priceSeries = isWeekly ? buildWeeklySeries(assetSeries) : assetSeries;
+  if (!priceSeries) {
+    return [];
+  }
+
+  const scoreValues = new Map(indicatorSeries.points.map((point) => [point.date, point.value]));
   const aligned = alignSeriesByDate(priceSeries, indicatorSeries);
 
   if (aligned.length < 7) {
     return [];
   }
 
-  const lowPivots = aligned.filter((_, index) => isPivotLow(aligned, index));
-  const highPivots = aligned.filter((_, index) => isPivotHigh(aligned, index));
+  const pivotConfig = isWeekly
+    ? WEEKLY_DIVERGENCE_PIVOT
+    : DAILY_DIVERGENCE_PIVOT;
+  const lowPivots = aligned.filter((_, index) =>
+    isPivotLow(aligned, index, pivotConfig.left, pivotConfig.right),
+  );
+  const highPivots = aligned.filter((_, index) =>
+    isPivotHigh(aligned, index, pivotConfig.left, pivotConfig.right),
+  );
   const markers: DivergenceMarker[] = [];
 
   for (let idx = 1; idx < lowPivots.length; idx += 1) {
     const previous = lowPivots[idx - 1];
     const current = lowPivots[idx];
+    const previousScore = scoreValues.get(previous.date);
+    const currentScore = scoreValues.get(current.date);
 
-    if (current.assetValue < previous.assetValue && current.indicatorValue > previous.indicatorValue) {
+    if (
+      previousScore !== undefined &&
+      currentScore !== undefined &&
+      current.priceLow < previous.priceLow &&
+      current.indicatorValue > previous.indicatorValue &&
+      currentScore >= BULLISH_SCORE_THRESHOLD
+    ) {
       markers.push({
         key: `bull-div:${indicatorSeries.key}:${current.date}`,
         date: current.date,
-        value: current.indicatorValue,
+        value: currentScore,
         startDate: previous.date,
-        startValue: previous.indicatorValue,
+        startValue: previousScore,
         direction: "bullish",
-        label: "Bull Div",
+        label: "Bull Score",
         indicatorKey: indicatorSeries.key,
         assetKey: assetSeries.key,
         color: "#16a34a",
@@ -302,16 +559,24 @@ export function buildRsiDivergenceMarkers(
   for (let idx = 1; idx < highPivots.length; idx += 1) {
     const previous = highPivots[idx - 1];
     const current = highPivots[idx];
+    const previousScore = scoreValues.get(previous.date);
+    const currentScore = scoreValues.get(current.date);
 
-    if (current.assetValue > previous.assetValue && current.indicatorValue < previous.indicatorValue) {
+    if (
+      previousScore !== undefined &&
+      currentScore !== undefined &&
+      current.priceHigh > previous.priceHigh &&
+      current.indicatorValue < previous.indicatorValue &&
+      currentScore <= BEARISH_SCORE_THRESHOLD
+    ) {
       markers.push({
         key: `bear-div:${indicatorSeries.key}:${current.date}`,
         date: current.date,
-        value: current.indicatorValue,
+        value: currentScore,
         startDate: previous.date,
-        startValue: previous.indicatorValue,
+        startValue: previousScore,
         direction: "bearish",
-        label: "Bear Div",
+        label: "Bear Score",
         indicatorKey: indicatorSeries.key,
         assetKey: assetSeries.key,
         color: "#dc2626",
@@ -320,180 +585,6 @@ export function buildRsiDivergenceMarkers(
   }
 
   return markers;
-}
-
-export function buildRsiSweepSeries(series: MacroSeries): MacroSeries[] {
-  const rsiByWindow = RSI_SWEEP_WINDOWS.map((period) => {
-    const derivedSeries = buildRsiSeries(series, period);
-    if (!derivedSeries) {
-      return null;
-    }
-
-    return {
-      period,
-      series: derivedSeries,
-    };
-  }).filter(
-    (
-      entry,
-    ): entry is {
-      period: (typeof RSI_SWEEP_WINDOWS)[number];
-      series: MacroSeries;
-    } => entry !== null,
-  );
-
-  if (rsiByWindow.length === 0) {
-    return [];
-  }
-
-  const maxPeriod = Math.max(...rsiByWindow.map((entry) => entry.period));
-  const rsiMaps = new Map(
-    rsiByWindow.map((entry) => [
-      entry.period,
-      new Map(entry.series.points.map((point) => [point.date, point.value])),
-    ]),
-  );
-
-  const consensusPoints: TimePoint[] = [];
-  const breadthPoints: TimePoint[] = [];
-  const overheatPoints: TimePoint[] = [];
-  const dispersionPoints: TimePoint[] = [];
-  const shortLongPoints: TimePoint[] = [];
-
-  for (const point of series.points.slice(maxPeriod)) {
-    const windowValues = rsiByWindow
-      .map((entry) => ({
-        period: entry.period,
-        value: rsiMaps.get(entry.period)?.get(point.date),
-      }))
-      .filter(
-        (
-          entry,
-        ): entry is {
-          period: (typeof RSI_SWEEP_WINDOWS)[number];
-          value: number;
-        } => entry.value !== undefined && Number.isFinite(entry.value),
-      );
-
-    if (windowValues.length !== rsiByWindow.length) {
-      continue;
-    }
-
-    const values = windowValues.map((entry) => entry.value);
-    const consensus = mean(values);
-    const dispersion = stdev(values);
-    const breadth50 = (values.filter((value) => value > 50).length / values.length) * 100;
-    const overheat70 = (values.filter((value) => value > 70).length / values.length) * 100;
-
-    const shortValues = windowValues
-      .filter((entry) => RSI_SWEEP_SHORT_WINDOWS.includes(entry.period))
-      .map((entry) => entry.value);
-    const longValues = windowValues
-      .filter((entry) => RSI_SWEEP_LONG_WINDOWS.includes(entry.period))
-      .map((entry) => entry.value);
-    const shortLongSpread =
-      shortValues.length > 0 && longValues.length > 0
-        ? (mean(shortValues) as number) - (mean(longValues) as number)
-        : null;
-
-    if (consensus !== null) {
-      consensusPoints.push({ date: point.date, value: consensus });
-    }
-    if (dispersion !== null) {
-      dispersionPoints.push({ date: point.date, value: dispersion });
-    }
-    breadthPoints.push({ date: point.date, value: breadth50 });
-    overheatPoints.push({ date: point.date, value: overheat70 });
-    if (shortLongSpread !== null) {
-      shortLongPoints.push({ date: point.date, value: shortLongSpread });
-    }
-  }
-
-  const classicRsi = buildRsiSeries(series, 14);
-  const weeklyRsi = buildWeeklyRsiSeries(series, 14);
-  const sweepSeries: MacroSeries[] = [];
-
-  if (classicRsi) {
-    sweepSeries.push(classicRsi);
-  }
-  if (weeklyRsi) {
-    sweepSeries.push(weeklyRsi);
-  }
-
-  const derived: Array<{
-    key: string;
-    label: string;
-    shortLabel: string;
-    description: string;
-    color: string;
-    points: TimePoint[];
-  }> = [
-    {
-      key: `rsi-consensus:${series.key}`,
-      label: `RSI Sweep Consensus (${series.label})`,
-      shortLabel: `RSI Consensus (${series.shortLabel})`,
-      description:
-        "Durchschnittlicher RSI ueber kurze bis lange Lookbacks; zeigt das breite Momentum ueber viele Horizonte.",
-      color: "#0f172a",
-      points: consensusPoints,
-    },
-    {
-      key: `rsi-breadth50:${series.key}`,
-      label: `RSI Sweep Breadth > 50 (${series.label})`,
-      shortLabel: `RSI Breadth 50 (${series.shortLabel})`,
-      description:
-        "Anteil der RSI-Lookbacks ueber 50 in Prozent; misst, wie breit bullisches Momentum abgestuetzt ist.",
-      color: "#059669",
-      points: breadthPoints,
-    },
-    {
-      key: `rsi-overheat70:${series.key}`,
-      label: `RSI Sweep Overheat > 70 (${series.label})`,
-      shortLabel: `RSI Overheat 70 (${series.shortLabel})`,
-      description:
-        "Anteil der RSI-Lookbacks ueber 70 in Prozent; zeigt, wie gross die ueberdehnte Sweep-Zone ist.",
-      color: "#dc2626",
-      points: overheatPoints,
-    },
-    {
-      key: `rsi-dispersion:${series.key}`,
-      label: `RSI Sweep Dispersion (${series.label})`,
-      shortLabel: `RSI Dispersion (${series.shortLabel})`,
-      description:
-        "Standardabweichung der RSI-Lookbacks; hohe Werte signalisieren Uneinigkeit zwischen kurzen und langen Horizonten.",
-      color: "#7c3aed",
-      points: dispersionPoints,
-    },
-    {
-      key: `rsi-shortlong:${series.key}`,
-      label: `RSI Short-Long Spread (${series.label})`,
-      shortLabel: `RSI Short-Long (${series.shortLabel})`,
-      description:
-        "Differenz zwischen kurzen und langen RSI-Lookbacks; positiv heisst kurzfristig heisser als langfristig.",
-      color: "#ea580c",
-      points: shortLongPoints,
-    },
-  ];
-
-  for (const entry of derived) {
-    if (entry.points.length === 0) {
-      continue;
-    }
-
-    sweepSeries.push(
-      createDerivedSeries(
-        series,
-        entry.key,
-        entry.label,
-        entry.shortLabel,
-        entry.description,
-        entry.color,
-        entry.points,
-      ),
-    );
-  }
-
-  return sweepSeries;
 }
 
 function pearson(xs: number[], ys: number[]): number | null {

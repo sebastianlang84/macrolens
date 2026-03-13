@@ -7,6 +7,14 @@ export type TimePoint = {
   value: number;
 };
 
+export type CandlePoint = {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
 export type SeriesStats = {
   latestValue: number | null;
   change1mPct: number | null;
@@ -23,6 +31,7 @@ export type MacroSeries = {
   description: string;
   proxyNote?: string;
   points: TimePoint[];
+  candles?: CandlePoint[];
   color: string;
   stats: SeriesStats;
   error?: string;
@@ -44,4 +53,3 @@ export type DashboardData = {
   signals: MacroSignal[];
   warnings: string[];
 };
-

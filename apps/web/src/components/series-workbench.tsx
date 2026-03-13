@@ -18,7 +18,7 @@ import { formatNumber } from "@/lib/formatters";
 import {
   buildOverlayData,
   buildRsiDivergenceMarkers,
-  buildRsiSweepSeries,
+  buildRsiScoreIndicators,
   findCorrelationExtremes,
   isAssetSeries,
 } from "@/lib/series-analysis";
@@ -460,7 +460,7 @@ function ChartPanel({
                       yAxisId={separateYAxisKeys.has(item.key) ? item.key : "shared"}
                       name={item.shortLabel}
                       stroke={item.color}
-                      strokeDasharray={item.key.startsWith("rsi14w:") ? "6 4" : undefined}
+                      strokeDasharray={item.key.startsWith("rsi-scorew:") ? "6 4" : undefined}
                       strokeWidth={2}
                       dot={false}
                       isAnimationActive={false}
@@ -545,7 +545,7 @@ export function SeriesWorkbench({
   const slotDescriptors: SlotDescriptor[] = deferredSlots.map((slot) => {
     const selectedSeries =
       deferredSelectableSeries.find((item) => item.key === slot.seriesKey) ?? null;
-    const indicatorOptions = selectedSeries ? buildRsiSweepSeries(selectedSeries) : [];
+    const indicatorOptions = selectedSeries ? buildRsiScoreIndicators(selectedSeries) : [];
     const effectiveIndicatorKey =
       slot.indicatorKey === ""
         ? ""
@@ -716,7 +716,7 @@ export function SeriesWorkbench({
       <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="grid shrink-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-            Overlay Slots & RSI Sweep
+            Overlay Slots & RSI Score
           </p>
         </div>
 

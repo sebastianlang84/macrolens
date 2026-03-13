@@ -27,6 +27,13 @@
 - [x] Observability planen (strukturierte Logs, Fehlertracking, Metriken) – *Basis-Timing-Logging integriert*.
 - [x] Accessibility-Review durchführen (Kontraste, Keyboard, Screenreader-Basis) – *Schriftgrößen & ARIA-Roles optimiert*.
 - [x] Deployment-Dokumentation ergänzen (Docker Compose Basis für stabilen Betrieb).
+- [x] BTCUSD-RSI-Divergenzen gegen TradingView validieren.
+  - Daily candles: `2026-02-12` bis `2026-02-24` (`bull divergence`).
+  - Weekly candles: `2024-12-09` bis `2025-01-20` (`bear divergence`).
+  - Weekly candles: `2025-01-20` bis `2025-05-19` (`bear divergence`).
+  - Weekly candles: `2025-07-07` bis `2025-09-29` (`bear divergence`).
+  - Ergebnis: verifiziert am `2026-03-11` mit Monday-aggregierten Weekly-OHLC, RSI-Pivots (`daily 3/5`, `weekly 3/3`) und Preisvergleich ueber `low/high`.
+  - Quelle: TradingView.
 
 ## Backlog (Process / Team, erst bei Bedarf)
 

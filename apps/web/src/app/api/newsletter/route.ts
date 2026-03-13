@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDashboardData } from "@/lib/dashboard-data";
-import { buildRsiSeries, buildWeeklyRsiSeries, buildRsiDivergenceMarkers } from "@/lib/series-analysis";
+import {
+  buildRsiDivergenceMarkers,
+  buildRsiScoreSeries,
+  buildWeeklyRsiScoreSeries,
+} from "@/lib/series-analysis";
 
 export const dynamic = "force-dynamic";
 
@@ -16,17 +20,14 @@ export async function GET() {
       );
     }
 
-    // Calculate RSI series
-    const rsi14 = buildRsiSeries(btcSeries, 14);
-    const rsi14w = buildWeeklyRsiSeries(btcSeries, 14);
+    const score1d = buildRsiScoreSeries(btcSeries);
+    const score1w = buildWeeklyRsiScoreSeries(btcSeries);
 
-    // Latest RSI values
-    const latestRsi14 = rsi14?.points.at(-1)?.value ?? null;
-    const latestRsi14w = rsi14w?.points.at(-1)?.value ?? null;
+    const latestScore1d = score1d?.points.at(-1)?.value ?? null;
+    const latestScore1w = score1w?.points.at(-1)?.value ?? null;
 
-    // Detected divergences
-    const dailyDivs = rsi14 ? buildRsiDivergenceMarkers(btcSeries, rsi14) : [];
-    const weeklyDivs = rsi14w ? buildRsiDivergenceMarkers(btcSeries, rsi14w) : [];
+    const dailyDivs = score1d ? buildRsiDivergenceMarkers(btcSeries, score1d) : [];
+    const weeklyDivs = score1w ? buildRsiDivergenceMarkers(btcSeries, score1w) : [];
 
     // Latest divergences (global)
     const lastDailyDiv = dailyDivs.at(-1);
@@ -36,9 +37,9 @@ export async function GET() {
       generatedAt: new Date().toISOString(),
       symbol: "BTC-USD",
       latestPrice: btcSeries.points.at(-1)?.value ?? null,
-      rsi: {
-        daily: latestRsi14,
-        weekly: latestRsi14w,
+      rsiScore: {
+        daily: latestScore1d,
+        weekly: latestScore1w,
       },
       divergences: {
         daily: dailyDivs.slice(-3).map(d => ({
