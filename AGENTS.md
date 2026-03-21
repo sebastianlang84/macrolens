@@ -14,7 +14,7 @@
 - You MUST NOT make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
 - You MUST NOT overwrite or revert unrelated user changes to simplify a task.
 - You should use subagents.
-- When using skills, you MUST consider whether the task can be made more deterministic by using accompanying repo or skill assets such as `scripts/*.py`, `scripts/*.sh`, templates, or other executable helpers instead of relying only on LLM-written prose or reasoning. Prefer deterministic code paths when they fit the task.
+- When using skills, consider whether the task would benefit from a more deterministic path via accompanying repo or skill assets such as `scripts/*.py`, `scripts/*.sh`, templates, or other executable helpers. Prefer those paths when they fit the task, but use plain LLM instructions or `.md` guidance when that is the more appropriate tool.
 - Follow `docs/policies/policy_docs_contract.md` for document boundaries and update targets.
 - Follow `docs/git-workflow.md` for git workflow rules.
 - You MUST end each completed task with a git commit unless the user explicitly says not to commit.
