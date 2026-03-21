@@ -11,6 +11,7 @@ The format is based on Keep a Changelog.
 - `CHANGELOG.md` als kuratierte Aenderungshistorie fuer nutzer-/operatorrelevante Repo-Aenderungen hinzugefuegt.
 - `docs/runbooks/web-first-checks.md` als explizites First-Checks-Runbook fuer Web-/Ops-Themen hinzugefuegt.
 - Dashboard-Pipeline-Tests hinzugefuegt, die Provider-Dispatch sowie Warning-/Signal-Assembly ueber eine Boundary absichern.
+- Boundary-Tests fuer neutrale Grenzfaelle der Makro-Signalregeln hinzugefuegt, damit deklarative Schwellenwerte gegen Verhaltensdrift abgesichert bleiben.
 
 ### Fixed
 - Workbench-Layout auf kleinen Viewports entkoppelt: das Dashboard erzwingt kein globales `100dvh`-One-Screen-Layout mehr, Slot-Konfiguration und Charts stapeln sich mobil/tabletfaehig und der manuelle Chart-Splitter ist auf Desktop begrenzt.
@@ -20,6 +21,7 @@ The format is based on Keep a Changelog.
 - `AGENTS.md` verweist auf Root-Dokumente jetzt nur noch ueber eine eigene `Key Files`-Sektion ohne Lesebefehl; welche Dateien tatsaechlich gelesen werden muessen, ergibt sich taskbezogen aus Diagnose und Verifikation.
 - Dashboard-Datenfluss hinter `apps/web/src/lib/dashboard-pipeline.ts` als explizite Boundary gekapselt; `dashboard-data.ts` ist nur noch der schmale Einstieg.
 - Makro-Signal-Ableitung in ein eigenes Regelmodul `apps/web/src/lib/macro-signal-rules.ts` geschnitten, sodass die Signalreihenfolge ueber eine explizite Registry statt ueber verteilte Aufrufe laeuft.
+- Makro-Signal-Regeln weiter vertieft: Schwellenwerte, Inputs und Standardtexte laufen nun ueber gemeinsame deklarative Rule-Definitionen statt ueber einzelne Regel-Funktionen.
 - Root-Dokumente (`AGENTS.md`, `README.md`, `INDEX.md`, `MEMORY.md`, `TODO.md`) auf klarere Abgrenzung zwischen Setup, stabilem Zustand, aktiver Arbeit, Historie und Policy ausgerichtet.
 - `TODO.md` auf aktive offene Arbeit reduziert; erledigte Historie wurde daraus entfernt.
 - `AGENTS.md` auf eine staerker normative Struktur mit Role/Rules/Key Files/Gates reduziert und von prozeduralen Ops-Details entlastet.

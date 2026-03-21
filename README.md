@@ -134,14 +134,18 @@ npm run build
 - Parsing der Provider-Antworten
 
 3. `apps/web/src/lib/dashboard-data.ts`
-- Aggregiert alle Serien
-- Baut Warnungen + Signale
+- Schmaler Einstieg fuer die Dashboard-Pipeline
+- Reicht nur `FRED_API_KEY` in die Aggregation weiter
 
 4. `apps/web/src/lib/macro-derivations.ts`
-- Heuristiken wie Trend, Breite, VIX-Regime, Öl-Impuls, Payroll-Momentum
+- Leitet Signale aus der Rule-Registry ab und baut Warnings
 
 5. `apps/web/src/components/*`
 - Darstellung (UI + Charts)
+
+Ergaenzend:
+- `apps/web/src/lib/dashboard-pipeline.ts` kapselt Provider-Fetching, Signalableitung und Warning-Assembly.
+- `apps/web/src/lib/macro-signal-rules.ts` haelt die Makro-Heuristiken deklarativ als gemeinsame Rule-Definitionen mit Schwellenwerten und Inputs.
 
 ## Architekturdiagramm (Mermaid)
 
@@ -271,3 +275,4 @@ sequenceDiagram
 2. Datenbank + Caching (Postgres/Prisma)
 3. Zeitraum-Filter / Vergleichsmodi
 4. Eigene Regel-Engine für Makro-Signale
+   Status: Grundstruktur vorhanden; neue Regeln koennen ueber die deklarative Rule-Registry in `apps/web/src/lib/macro-signal-rules.ts` erweitert werden.

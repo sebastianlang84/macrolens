@@ -128,4 +128,49 @@ describe("deriveMacroSignals", () => {
     expect(toneOf(signals, "inflation")).toBe("negative");
     expect(toneOf(signals, "unemployment")).toBe("negative");
   });
+
+  it("keeps threshold-based signals neutral at configured boundaries", () => {
+    const signals = deriveMacroSignals([
+      makeSeries("vix", "index", [{ date: "2025-12-01", value: 20 }]),
+      makeSeries("oil", "usd", [
+        { date: "2025-09-01", value: 100 },
+        { date: "2025-12-01", value: 115 },
+      ]),
+      makeSeries("cpi", "index", [
+        { date: "2024-11-01", value: 100 },
+        { date: "2025-11-01", value: 103 },
+      ]),
+      makeSeries("payrolls", "thousand_persons", [
+        { date: "2025-11-01", value: 150_000 },
+        { date: "2025-12-01", value: 150_050 },
+      ]),
+      makeSeries("fedfunds", "percent", [
+        { date: "2024-01-01", value: 4.0 },
+        { date: "2025-01-01", value: 4.2 },
+      ]),
+      makeSeries("unrate", "percent", [
+        { date: "2025-09-01", value: 4.0 },
+        { date: "2025-12-01", value: 4.2 },
+      ]),
+      makeSeries("dgs10", "percent", [{ date: "2025-12-01", value: 4.4 }]),
+      makeSeries("dgs2", "percent", [{ date: "2025-12-01", value: 4.1 }]),
+      makeSeries("ig_oas", "percent", [
+        { date: "2025-09-01", value: 1.5 },
+        { date: "2025-12-01", value: 1.6 },
+      ]),
+      makeSeries("hy_oas", "percent", [
+        { date: "2025-09-01", value: 4.7 },
+        { date: "2025-12-01", value: 4.9 },
+      ]),
+    ]);
+
+    expect(toneOf(signals, "volatility")).toBe("neutral");
+    expect(toneOf(signals, "oil")).toBe("neutral");
+    expect(toneOf(signals, "inflation")).toBe("neutral");
+    expect(toneOf(signals, "payrolls")).toBe("neutral");
+    expect(toneOf(signals, "policy")).toBe("neutral");
+    expect(toneOf(signals, "unemployment")).toBe("neutral");
+    expect(toneOf(signals, "yield-curve")).toBe("neutral");
+    expect(toneOf(signals, "credit")).toBe("neutral");
+  });
 });
