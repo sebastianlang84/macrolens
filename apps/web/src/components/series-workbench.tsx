@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { formatNumber } from "@/lib/formatters";
 import {
+  buildCompanionIndicatorSeries,
   buildOverlayData,
   buildRsiDivergenceMarkers,
   buildRsiScoreIndicators,
@@ -871,7 +872,15 @@ export function SeriesWorkbench({ series, className }: Props) {
   );
   const indicatorSeries = dedupeSeriesByKey(
     slotDescriptors.flatMap((slot) =>
-      slot.selectedIndicator ? [slot.selectedIndicator] : []
+      slot.selectedIndicator
+        ? [
+            slot.selectedIndicator,
+            ...buildCompanionIndicatorSeries(
+              slot.selectedSeries ?? slot.selectedIndicator,
+              slot.selectedIndicator
+            ),
+          ]
+        : []
     )
   );
   const overlayAxisModeByKey = new Map(
@@ -888,17 +897,21 @@ export function SeriesWorkbench({ series, className }: Props) {
       .filter((entry): entry is readonly [string, AxisMode] => entry !== null)
   );
   const indicatorAxisModeByKey = new Map(
-    slotDescriptors
-      .map((slot) => {
-        const slotState = slotStateById.get(slot.id);
-        return slot.selectedIndicator
-          ? ([
-              slot.selectedIndicator.key,
-              slotState?.indicatorAxisMode ?? "linear",
-            ] as const)
-          : null;
-      })
-      .filter((entry): entry is readonly [string, AxisMode] => entry !== null)
+    slotDescriptors.flatMap((slot) => {
+      const slotState = slotStateById.get(slot.id);
+      if (!(slot.selectedSeries && slot.selectedIndicator)) {
+        return [];
+      }
+
+      const axisMode = slotState?.indicatorAxisMode ?? "linear";
+      return [
+        [slot.selectedIndicator.key, axisMode] as const,
+        ...buildCompanionIndicatorSeries(
+          slot.selectedSeries,
+          slot.selectedIndicator
+        ).map((series) => [series.key, axisMode] as const),
+      ];
+    })
   );
   const overlaySeparateYAxisKeys = new Set(
     slotDescriptors
@@ -912,16 +925,28 @@ export function SeriesWorkbench({ series, className }: Props) {
       .filter((key): key is string => !!key)
   );
   const indicatorSeparateYAxisKeys = new Set(
-    slotDescriptors
-      .filter(
-        (slot) =>
-          slot.selectedIndicator &&
-          ((slotStateById.get(slot.id)?.indicatorSeparateYAxis ?? true) ||
-            (slotStateById.get(slot.id)?.indicatorAxisMode ?? "linear") ===
-              "log")
-      )
-      .map((slot) => slot.selectedIndicator?.key)
-      .filter((key): key is string => !!key)
+    slotDescriptors.flatMap((slot) => {
+      if (!(slot.selectedSeries && slot.selectedIndicator)) {
+        return [];
+      }
+
+      const slotState = slotStateById.get(slot.id);
+      const shouldSeparate =
+        (slotState?.indicatorSeparateYAxis ?? true) ||
+        (slotState?.indicatorAxisMode ?? "linear") === "log";
+
+      if (!shouldSeparate) {
+        return [];
+      }
+
+      return [
+        slot.selectedIndicator.key,
+        ...buildCompanionIndicatorSeries(
+          slot.selectedSeries,
+          slot.selectedIndicator
+        ).map((series) => series.key),
+      ];
+    })
   );
 
   useEffect(() => {

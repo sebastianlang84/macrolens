@@ -1,6 +1,7 @@
 import { addDays, formatISO } from "date-fns";
 import { describe, expect, it } from "vitest";
 import {
+  buildCompanionIndicatorSeries,
   buildOverlayData,
   buildRsiDivergenceMarkers,
   buildRsiScoreIndicators,
@@ -144,6 +145,37 @@ describe("series-analysis", () => {
 
     expect(keys).toContain("rsi-score:bitcoin");
     expect(keys).toContain("rsi-scorew:bitcoin");
+  });
+
+  it("returns the underlying RSI companion for daily and weekly RSI scores", () => {
+    const candles = makeDailyCandles(
+      "2025-01-06",
+      Array.from({ length: 360 }, (_, idx) => ({
+        close: 100 + idx * 0.3 + (idx % 7) - 3,
+      }))
+    );
+    const base = makeSeries(
+      "bitcoin",
+      candles.map((candle) => candle.close),
+      candles
+    );
+
+    const dailyScore = buildRsiScoreSeries(base);
+    const weeklyScore = buildWeeklyRsiScoreSeries(base);
+
+    expect(dailyScore).not.toBeNull();
+    expect(weeklyScore).not.toBeNull();
+    if (!(dailyScore && weeklyScore)) {
+      throw new Error("Expected both daily and weekly RSI scores");
+    }
+
+    const dailyCompanion = buildCompanionIndicatorSeries(base, dailyScore);
+    const weeklyCompanion = buildCompanionIndicatorSeries(base, weeklyScore);
+
+    expect(dailyCompanion).toHaveLength(1);
+    expect(dailyCompanion[0]?.key).toBe("rsi-internal:14:bitcoin");
+    expect(weeklyCompanion).toHaveLength(1);
+    expect(weeklyCompanion[0]?.key).toBe("rsi-internal:14:bitcoin:week");
   });
 
   it("aggregates daily candles into Monday-aligned weekly candles", () => {

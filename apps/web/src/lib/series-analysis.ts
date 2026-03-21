@@ -473,6 +473,49 @@ export function buildRsiScoreIndicators(series: MacroSeries): MacroSeries[] {
   );
 }
 
+export function buildCompanionIndicatorSeries(
+  assetSeries: MacroSeries,
+  indicatorSeries: MacroSeries
+): MacroSeries[] {
+  const isWeeklyScore = indicatorSeries.key.startsWith("rsi-scorew:");
+  const isDailyScore = indicatorSeries.key.startsWith("rsi-score:");
+
+  if (!(isDailyScore || isWeeklyScore)) {
+    return [];
+  }
+
+  const bundle = isWeeklyScore
+    ? (() => {
+        const weeklySeries = buildWeeklySeries(assetSeries);
+        if (!weeklySeries) {
+          return null;
+        }
+
+        return buildRsiScoreSeriesForInput(
+          weeklySeries,
+          assetSeries,
+          "rsi-scorew",
+          " W",
+          " W",
+          "#0f766e"
+        );
+      })()
+    : buildRsiScoreSeriesForInput(
+        assetSeries,
+        assetSeries,
+        "rsi-score",
+        "",
+        "",
+        "#2563eb"
+      );
+
+  if (!bundle || bundle.scoreSeries.key !== indicatorSeries.key) {
+    return [];
+  }
+
+  return bundle.rsiSeries.points.length > 0 ? [bundle.rsiSeries] : [];
+}
+
 function alignSeriesByDate(
   assetSeries: MacroSeries,
   rsiSeries: MacroSeries,
