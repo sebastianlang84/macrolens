@@ -19,8 +19,6 @@
 - Die Dashboard-Aggregation läuft nun über `apps/web/src/lib/dashboard-pipeline.ts`; `apps/web/src/lib/dashboard-data.ts` ist nur noch der schmale Einstieg mit `FRED_API_KEY`-Weitergabe, während die Pipeline selbst strukturierte Provider-/Slow-Fetch-Diagnostik über einen optionalen Callback emittieren kann.
 - Makro-Signal-Regeln liegen nun in `apps/web/src/lib/macro-signal-rules.ts` als explizite Rule-Registry; Schwellenwerte, Inputs und Signaltexte laufen dort deklarativ ueber gemeinsame Rule-Definitionen statt ueber einzelne Regel-Funktionen, waehrend `apps/web/src/lib/macro-derivations.ts` darauf aufbauend nur noch Signalableitung und Warnings kapselt.
 - README, TODO, CHANGELOG und die neue Doku-Policy wurden am 2026-03-21 auf strengere Dokumentgrenzen umgestellt.
-- `AGENTS.md` wurde am 2026-03-21 auf eine staerker normative Struktur umgestellt, auf ihren Policy-Zweck verengt und danach audit-orientiert nachgeschaerft: Normsprache, Verweis auf `docs/git-workflow.md`, kompakte Deny-List und ein weiterer Minimalismus-Pass; konkrete Web-/Ops-First-Checks liegen in `docs/runbooks/web-first-checks.md`, Dokumentgrenzen in `docs/policies/policy_docs_contract.md`.
-- `AGENTS.md` verweist seit 2026-03-21 auf Root-Dokumente nur noch ueber eine `Key Files`-Sektion mit Rollenbeschreibung ohne eigenen Lesebefehl; taskbezogene Dateipruefung wird ueber Diagnose und Verifikation gesteuert.
 - Ein verbleibender Workbench-Refactor bleibt als aktives Architekturthema in `TODO.md` festgehalten; Dashboard-Pipeline, Makro-Signal-Regelwerk und die Workbench-Engine-Orchestrierung wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
 
 ## Long-Term Memory
