@@ -13,6 +13,7 @@
 - Die Workbench-Shell nutzt kein global erzwungenes One-Screen-Layout mehr; kleine Viewports stapeln Slot-Konfiguration und Charts vertikal, waehrend der manuelle Chart-Splitter nur noch auf `lg` aktiv ist.
 - Der visuelle Hover-Readout der Charts bleibt erhalten, erzeugt aber keine `aria-live`-Updates mehr bei jeder Mausbewegung; die Y-/`L`-Slot-Steuerung hat nun explizite zugaengliche Namen.
 - Stand 2026-03-21: Die fachliche Slot-/Indicator-Orchestrierung der Workbench liegt nicht mehr direkt in `apps/web/src/components/series-workbench.tsx`, sondern in `apps/web/src/lib/series-workbench-engine.ts`; die Client-Komponente konsumiert nun ein zusammenhaengendes Engine-Paket fuer `slotDescriptors`, Overlay-/Indicator-Reihen, Companion-Zuordnung und Divergenzmarker.
+- Stand 2026-03-21: Session-/Persistenzlogik der Workbench liegt nun in `apps/web/src/lib/use-series-workbench-session.ts`, waehrend Chart-Projection, X-Domain- und Achsenableitung in `apps/web/src/lib/series-workbench-chart.ts` zusammengefasst sind; `series-workbench.tsx` ist damit deutlich staerker auf Rendering und Slot-Interaktion reduziert.
 - Für Asset-Indikatoren sind aktuell nur `RSI Score` und `RSI Score W` vorgesehen; passende `RSI 14`-Companion-Reihen werden bei Score-Auswahl automatisch mitgerendert.
 - `RSI Score` ist ein um `50` zentrierter Divergenz-Score aus Preis-/RSI-Regressionen mit DEMA-Glättung; `RSI Score W` basiert auf Monday-aggregierten Weekly-OHLC.
 - Divergenzmarker werden auf dem Score-Indikator selbst gerendert; die Referenzfenster für BTCUSD wurden am 2026-03-11 gegen TradingView validiert.
@@ -40,9 +41,9 @@
 - Yahoo ist keine offiziell stabil versionierte Datenquelle und kann sich ändern.
 - Unterschiedliche Frequenzen (daily vs monthly) erschweren direkte Vergleiche.
 - Einfache Heuristiken können in Sonderregimen irreführend sein.
-- Die verbleibende Session-/Projection-/Rendering-Kopplung in der Workbench bleibt trotz Engine-Schnitt ein Wartungsrisiko.
+- Die Workbench ist entlang Engine-, Session-/Persistenz- und Chart-Projection-Grenzen geschnitten; verbleibende Komplexitaet sitzt primaer in den Render-Komponenten selbst.
 
 ## Next Steps
 - `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
-- Verbleibenden Workbench-Refactor fuer Session-/Projection- und Rendering-Grenzen vertiefen.
+- Naechster Workbench-Schritt ist die `Daily`/`Weekly`-Umschaltung fuer Charts auf dem nun getrennten Fundament.
 - Optional: Caching/DB einführen und Makro-Regeln schrittweise verfeinern.

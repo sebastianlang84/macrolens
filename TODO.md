@@ -2,7 +2,7 @@
 
 ## P0 (Now)
 
-- [ ] Bundle A: Workbench-Fundament fertig schneiden.
+- [x] Bundle A: Workbench-Fundament fertig schneiden.
   Scope: `apps/web/src/components/series-workbench.tsx` weiter in Session-/Projection-/Rendering-Grenzen aufteilen, damit Slot-State, Persistenz, Achsenregeln und X-Domain-Logik nicht weiter in einer grossen Client-Komponente vermischt bleiben.
 - [ ] Bundle A: Wochenkerzen-Ansicht fuer MacroLens-Workbench/Charts ergaenzen.
   Scope: UI-Umschaltung fuer `Daily`/`Weekly` auf Basis des Workbench-Fundaments, nicht Pine.

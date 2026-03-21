@@ -1,8 +1,7 @@
 "use client";
 
-import { format, parseISO, subMonths, subYears } from "date-fns";
 import type { Dispatch, SetStateAction } from "react";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -17,28 +16,33 @@ import {
 } from "recharts";
 import { formatNumber } from "@/lib/formatters";
 import {
-  buildOverlayData,
-  findCorrelationExtremes,
-  isAssetSeries,
-} from "@/lib/series-analysis";
+  buildSeriesWorkbenchProjection,
+  filterMarkersToDomain,
+  filterRowsToDomain,
+  formatChartAxisValue,
+  formatDateTick,
+  getPositiveMinForKey,
+  type ChartMarker,
+  type OverlayRow,
+} from "@/lib/series-workbench-chart";
 import {
   buildSeriesWorkbenchEngine,
   type WorkbenchAxisMode,
   type WorkbenchSelectionSlot,
   type WorkbenchSlotDescriptor,
 } from "@/lib/series-workbench-engine";
+import {
+  SERIES_WORKBENCH_SLOT_COUNT,
+  useSeriesWorkbenchSession,
+  type XRangePreset,
+} from "@/lib/use-series-workbench-session";
+import { isAssetSeries } from "@/lib/series-analysis";
 import type { MacroSeries } from "@/types/macro";
 
 interface Props {
   className?: string;
   series: MacroSeries[];
 }
-
-type OverlayRow = {
-  date: string;
-  dateTs: number;
-  dateLabel: string;
-} & Record<string, number | string>;
 
 interface ChartPanelProps {
   axisModeByKey: Map<string, AxisMode>;
@@ -65,16 +69,6 @@ interface HoverSnapshot {
   }>;
 }
 
-interface ChartMarker {
-  color: string;
-  dateTs: number;
-  indicatorKey: string;
-  key: string;
-  startDateTs: number;
-  startValue: number;
-  value: number;
-}
-
 interface SelectionSlotRowProps {
   assetOptions: MacroSeries[];
   deferredSelectableSeries: MacroSeries[];
@@ -85,20 +79,7 @@ interface SelectionSlotRowProps {
 }
 
 type AxisMode = WorkbenchAxisMode;
-type XRangePreset = "3m" | "6m" | "1y" | "2y" | "max";
-
-const SLOT_COUNT = 6;
-const CHART_SPLIT_STORAGE_KEY = "macrolens:workbench-chart-split";
-const CHART_X_RANGE_STORAGE_KEY = "macrolens:workbench-x-range";
-const DEFAULT_CHART_SPLIT = 0.66;
-const MIN_CHART_SPLIT = 0.35;
-const MAX_CHART_SPLIT = 0.8;
 const CHART_SYNC_ID = "macrolens-workbench-sync";
-const DEFAULT_X_RANGE_PRESET: XRangePreset = "max";
-const FALLBACK_DATE_DOMAIN: [number, number] = [
-  Date.UTC(2025, 0, 1),
-  Date.UTC(2026, 0, 1),
-];
 const X_RANGE_OPTIONS: Array<{ value: XRangePreset; label: string }> = [
   { value: "3m", label: "3M" },
   { value: "6m", label: "6M" },
@@ -106,157 +87,6 @@ const X_RANGE_OPTIONS: Array<{ value: XRangePreset; label: string }> = [
   { value: "2y", label: "2Y" },
   { value: "max", label: "Max" },
 ];
-
-function buildInitialSlots(series: MacroSeries[]): WorkbenchSelectionSlot[] {
-  const defaultSeriesKey =
-    series.find((item) => item.key === "sp500")?.key ?? "";
-
-  return Array.from({ length: SLOT_COUNT }, (_, idx) => {
-    const selectedSeries =
-      idx === 0
-        ? (series.find((item) => item.key === defaultSeriesKey) ?? null)
-        : null;
-
-    return {
-      id: `slot-${idx + 1}`,
-      seriesKey: selectedSeries?.key ?? "",
-      indicatorKey: "",
-      overlaySeparateYAxis: false,
-      indicatorSeparateYAxis: true,
-      overlayAxisMode: "linear",
-      indicatorAxisMode: "linear",
-    };
-  });
-}
-
-function clampChartSplit(value: number): number {
-  return Math.min(MAX_CHART_SPLIT, Math.max(MIN_CHART_SPLIT, value));
-}
-
-function parseStoredChartSplit(value: string | null): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? clampChartSplit(parsed) : null;
-}
-
-function parseStoredXRangePreset(value: string | null): XRangePreset | null {
-  if (
-    value === "3m" ||
-    value === "6m" ||
-    value === "1y" ||
-    value === "2y" ||
-    value === "max"
-  ) {
-    return value;
-  }
-
-  return null;
-}
-
-function getChartSplitFromPointer(
-  container: HTMLDivElement | null,
-  clientY: number
-): number | null {
-  const rect = container?.getBoundingClientRect();
-  if (!rect || rect.height <= 0) {
-    return null;
-  }
-
-  return clampChartSplit((clientY - rect.top) / rect.height);
-}
-
-function buildDisplayRows(series: MacroSeries[]): OverlayRow[] {
-  return buildOverlayData(series, "raw").map((row) => ({
-    ...row,
-    dateTs: parseISO(row.date).getTime(),
-    dateLabel: format(parseISO(row.date), "MMM yy"),
-  }));
-}
-
-function formatChartAxisValue(value: number): string {
-  if (Math.abs(value) >= 1000) {
-    return `${Math.round(value / 1000)}k`;
-  }
-  return formatNumber(value, 1);
-}
-
-function formatDateTick(value: unknown): string {
-  return typeof value === "number" ? format(value, "MMM yy") : "";
-}
-
-function getSharedDateDomain(rows: OverlayRow[][]): [number, number] | null {
-  const timestamps = rows
-    .flatMap((entry) => entry.map((row) => row.dateTs))
-    .filter(Number.isFinite);
-
-  if (timestamps.length === 0) {
-    return null;
-  }
-
-  return [Math.min(...timestamps), Math.max(...timestamps)];
-}
-
-function getVisibleDateDomain(
-  domain: [number, number],
-  preset: XRangePreset
-): [number, number] {
-  const [minTs, maxTs] = domain;
-
-  if (preset === "max") {
-    return domain;
-  }
-
-  const maxDate = new Date(maxTs);
-  let startDate = subYears(maxDate, 2);
-  if (preset === "3m") {
-    startDate = subMonths(maxDate, 3);
-  } else if (preset === "6m") {
-    startDate = subMonths(maxDate, 6);
-  } else if (preset === "1y") {
-    startDate = subYears(maxDate, 1);
-  }
-  const startTs = Math.max(minTs, startDate.getTime());
-
-  return [startTs, maxTs];
-}
-
-function getPositiveMinForKey(rows: OverlayRow[], key: string): number | null {
-  let minValue: number | null = null;
-
-  for (const row of rows) {
-    const value = row[key];
-    if (typeof value !== "number" || value <= 0) {
-      continue;
-    }
-
-    if (minValue === null || value < minValue) {
-      minValue = value;
-    }
-  }
-
-  return minValue;
-}
-
-function filterRowsToDomain(
-  rows: OverlayRow[],
-  domain: [number, number]
-): OverlayRow[] {
-  return rows.filter(
-    (row) => row.dateTs >= domain[0] && row.dateTs <= domain[1]
-  );
-}
-
-function filterMarkersToDomain(
-  markers: ChartMarker[],
-  domain: [number, number]
-): ChartMarker[] {
-  return markers.filter(
-    (marker) => marker.dateTs >= domain[0] && marker.dateTs <= domain[1]
-  );
-}
 
 function canUseLogScale(series: MacroSeries[]): boolean {
   if (series.length === 0) {
@@ -795,18 +625,19 @@ function SelectionSlotRow({
 
 export function SeriesWorkbench({ series, className }: Props) {
   const selectableSeries = series.filter((item) => item.points.length > 2);
-  const deferredSelectableSeries = useDeferredValue(selectableSeries);
-  const [slots, setSlots] = useState<WorkbenchSelectionSlot[]>(() =>
-    buildInitialSlots(selectableSeries)
-  );
-  const deferredSlots = useDeferredValue(slots);
-  const [chartSplit, setChartSplit] = useState(DEFAULT_CHART_SPLIT);
-  const [xRangePreset, setXRangePreset] = useState<XRangePreset>(
-    DEFAULT_X_RANGE_PRESET
-  );
-  const [isResizing, setIsResizing] = useState(false);
-  const [chartsReady, setChartsReady] = useState(false);
-  const chartStackRef = useRef<HTMLDivElement | null>(null);
+  const {
+    beginResize,
+    chartSplit,
+    chartStackRef,
+    chartsReady,
+    deferredSelectableSeries,
+    deferredSlots,
+    isResizing,
+    nudgeChartSplit,
+    setSlots,
+    setXRangePreset,
+    xRangePreset,
+  } = useSeriesWorkbenchSession(selectableSeries);
 
   const assetOptions = deferredSelectableSeries.filter((item) =>
     isAssetSeries(item)
@@ -824,169 +655,29 @@ export function SeriesWorkbench({ series, className }: Props) {
     indicatorSeries,
     indicatorMarkers,
   } = buildSeriesWorkbenchEngine(deferredSelectableSeries, deferredSlots);
-  const overlayAxisModeByKey = new Map(
-    slotDescriptors
-      .map((slot) => {
-        const slotState = slotStateById.get(slot.id);
-        return slot.selectedSeries
-          ? ([
-              slot.selectedSeries.key,
-              slotState?.overlayAxisMode ?? "linear",
-            ] as const)
-          : null;
-      })
-      .filter((entry): entry is readonly [string, AxisMode] => entry !== null)
-  );
-  const indicatorAxisModeByKey = new Map(
-    slotDescriptors.flatMap((slot) => {
-      const slotState = slotStateById.get(slot.id);
-      if (!(slot.selectedSeries && slot.selectedIndicator)) {
-        return [];
-      }
-
-      const axisMode = slotState?.indicatorAxisMode ?? "linear";
-      return [
-        [slot.selectedIndicator.key, axisMode] as const,
-        ...(companionSeriesKeysByIndicatorKey.get(slot.selectedIndicator.key) ??
-          []
-        ).map((seriesKey) => [seriesKey, axisMode] as const),
-      ];
-    })
-  );
-  const overlaySeparateYAxisKeys = new Set(
-    slotDescriptors
-      .filter(
-        (slot) =>
-          slot.selectedSeries &&
-          ((slotStateById.get(slot.id)?.overlaySeparateYAxis ?? false) ||
-            (slotStateById.get(slot.id)?.overlayAxisMode ?? "linear") === "log")
-      )
-      .map((slot) => slot.selectedSeries?.key)
-      .filter((key): key is string => !!key)
-  );
-  const indicatorSeparateYAxisKeys = new Set(
-    slotDescriptors.flatMap((slot) => {
-      if (!(slot.selectedSeries && slot.selectedIndicator)) {
-        return [];
-      }
-
-      const slotState = slotStateById.get(slot.id);
-      const shouldSeparate =
-        (slotState?.indicatorSeparateYAxis ?? true) ||
-        (slotState?.indicatorAxisMode ?? "linear") === "log";
-
-      if (!shouldSeparate) {
-        return [];
-      }
-
-      return [
-        slot.selectedIndicator.key,
-        ...(companionSeriesKeysByIndicatorKey.get(slot.selectedIndicator.key) ??
-          []),
-      ];
-    })
-  );
-
-  useEffect(() => {
-    const stored = parseStoredChartSplit(
-      window.localStorage.getItem(CHART_SPLIT_STORAGE_KEY)
-    );
-    if (stored === null) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      setChartSplit(stored);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
-
-  useEffect(() => {
-    const stored = parseStoredXRangePreset(
-      window.localStorage.getItem(CHART_X_RANGE_STORAGE_KEY)
-    );
-    if (stored === null) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      setXRangePreset(stored);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(CHART_SPLIT_STORAGE_KEY, chartSplit.toFixed(3));
-  }, [chartSplit]);
-
-  useEffect(() => {
-    window.localStorage.setItem(CHART_X_RANGE_STORAGE_KEY, xRangePreset);
-  }, [xRangePreset]);
-
-  useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setChartsReady(true);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
-
-  useEffect(() => {
-    if (!isResizing) {
-      return;
-    }
-
-    const previousCursor = document.body.style.cursor;
-    const previousUserSelect = document.body.style.userSelect;
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const nextSplit = getChartSplitFromPointer(
-        chartStackRef.current,
-        event.clientY
-      );
-      if (nextSplit !== null) {
-        setChartSplit(nextSplit);
-      }
-    };
-    const stopResize = () => setIsResizing(false);
-
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopResize);
-
-    return () => {
-      document.body.style.cursor = previousCursor;
-      document.body.style.userSelect = previousUserSelect;
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", stopResize);
-    };
-  }, [isResizing]);
-
-  const overlayRows = buildDisplayRows(overlaySeries);
-  const indicatorRows = buildDisplayRows(indicatorSeries);
-  const sharedDateDomain =
-    getSharedDateDomain([overlayRows, indicatorRows]) ?? FALLBACK_DATE_DOMAIN;
-  const visibleDateDomain = getVisibleDateDomain(
-    sharedDateDomain,
-    xRangePreset
-  );
-  const chartMarkers = indicatorMarkers.map((marker) => ({
-    key: marker.key,
-    startDateTs: parseISO(marker.startDate).getTime(),
-    startValue: marker.startValue,
-    dateTs: parseISO(marker.date).getTime(),
-    value: marker.value,
-    color: marker.color,
-    indicatorKey: marker.indicatorKey,
-  }));
+  const {
+    chartMarkers,
+    extremes,
+    indicatorAxisModeByKey,
+    indicatorRows,
+    indicatorSeparateYAxisKeys,
+    overlayAxisModeByKey,
+    overlayRows,
+    overlaySeparateYAxisKeys,
+    visibleDateDomain,
+  } = buildSeriesWorkbenchProjection({
+    companionSeriesKeysByIndicatorKey,
+    indicatorMarkers,
+    indicatorSeries,
+    overlaySeries,
+    slotDescriptors,
+    slotStateById,
+    xRangePreset,
+  });
   const topChartShare = Math.round(chartSplit * 100);
   const rootClassName = ["mx-auto w-full max-w-7xl min-h-0", className ?? ""]
     .join(" ")
     .trim();
-  const extremes = findCorrelationExtremes(overlaySeries);
 
   return (
     <section className={rootClassName}>
@@ -1004,7 +695,7 @@ export function SeriesWorkbench({ series, className }: Props) {
               {overlaySeries.length} Reihen oben, {indicatorSeries.length}{" "}
               Indikatoren unten,{" "}
               {slotDescriptors.filter((slot) => slot.selectedSeries).length} von{" "}
-              {SLOT_COUNT} Slots aktiv.
+              {SERIES_WORKBENCH_SLOT_COUNT} Slots aktiv.
             </p>
           </article>
 
@@ -1106,23 +797,16 @@ export function SeriesWorkbench({ series, className }: Props) {
                 onKeyDown={(event) => {
                   if (event.key === "ArrowUp") {
                     event.preventDefault();
-                    setChartSplit((current) => clampChartSplit(current - 0.03));
+                    nudgeChartSplit(-0.03);
                   }
                   if (event.key === "ArrowDown") {
                     event.preventDefault();
-                    setChartSplit((current) => clampChartSplit(current + 0.03));
+                    nudgeChartSplit(0.03);
                   }
                 }}
                 onPointerDown={(event) => {
                   event.preventDefault();
-                  const nextSplit = getChartSplitFromPointer(
-                    chartStackRef.current,
-                    event.clientY
-                  );
-                  if (nextSplit !== null) {
-                    setChartSplit(nextSplit);
-                  }
-                  setIsResizing(true);
+                  beginResize(event.clientY);
                 }}
                 type="button"
               >
