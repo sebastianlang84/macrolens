@@ -144,7 +144,7 @@ npm run build
 - Darstellung (UI + Charts)
 
 Ergaenzend:
-- `apps/web/src/lib/dashboard-pipeline.ts` kapselt Provider-Fetching, Signalableitung und Warning-Assembly.
+- `apps/web/src/lib/dashboard-pipeline.ts` kapselt Provider-Fetching, Signalableitung, Warning-Assembly und einen optionalen Diagnostik-Hook fuer Provider-Zusammenfassungen und Slow-Fetches.
 - `apps/web/src/lib/macro-signal-rules.ts` haelt die Makro-Heuristiken deklarativ als gemeinsame Rule-Definitionen mit Schwellenwerten und Inputs.
 
 ## Architekturdiagramm (Mermaid)
