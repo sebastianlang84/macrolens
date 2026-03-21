@@ -2,10 +2,6 @@
 
 ## P0 (Now)
 
-- [ ] Responsive-Fix fuer die Workbench umsetzen: globale `overflow-hidden`/starre `100dvh`-Nutzung entschärfen und fuer kleine Viewports einen echten mobilen/tabletfaehigen Fallback statt abgeschnittener One-Screen-Layouts bauen.
-- [ ] Accessibility-Fix fuer den Hover-Readout umsetzen: `aria-live`-Verhalten im Chart-Tooltip so begrenzen, dass Screenreader nicht bei jeder Mausbewegung mit dauernden Updates ueberflutet werden.
-- [ ] Accessibility-Fix fuer die Slot-Steuerung umsetzen: Y-Checkboxen und `L`-Buttons mit klaren zugänglichen Namen/Labels versehen, damit die sechs Konfigurationszeilen per Screenreader und Tastatur verständlich bleiben.
-
 ## P1 (Next)
 
 - [ ] Architektur-Refactor vorbereiten: `apps/web/src/lib/dashboard-data.ts` von flacher Orchestrierung zu einer echten Dashboard-Pipeline vertiefen, die Provider-Fetching, Warning-Assembly und Signal-Bildung an einer stabilen Boundary kapselt; Boundary-Tests statt verteilter Provider-/Assembler-Tests.

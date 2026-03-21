@@ -556,10 +556,7 @@ function ChartPanel({
             </ResponsiveContainer>
           </div>
 
-          <div
-            aria-live="polite"
-            className="mt-1 flex min-h-[2.75rem] items-end justify-end"
-          >
+          <div className="mt-1 flex min-h-[2.75rem] items-end justify-end">
             {hoverSnapshot ? (
               <div className="max-w-full rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-right shadow-sm">
                 <p className="font-semibold text-slate-500 text-xs">
@@ -656,6 +653,13 @@ function SelectionSlotRow({
   const indicatorLogAllowed = Boolean(
     slot.selectedIndicator && canUseLogScale([slot.selectedIndicator])
   );
+  const slotLabel = slot.id.replace("slot-", "Slot ");
+  const seriesLabel = slot.selectedSeries?.shortLabel ?? "keine Reihe";
+  const indicatorLabel = slot.selectedIndicator?.shortLabel ?? "kein Indikator";
+  const overlayYAxisLabel = `${slotLabel}: Eigene Y-Achse fuer obere Reihe ${seriesLabel}`;
+  const overlayLogLabel = `${slotLabel}: Logarithmische Skala fuer obere Reihe ${seriesLabel}`;
+  const indicatorYAxisLabel = `${slotLabel}: Eigene Y-Achse fuer Indikator ${indicatorLabel}`;
+  const indicatorLogLabel = `${slotLabel}: Logarithmische Skala fuer Indikator ${indicatorLabel}`;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
@@ -712,6 +716,7 @@ function SelectionSlotRow({
             checked={overlaySeparateChecked}
             className="h-3.5 w-3.5 accent-slate-900"
             disabled={overlayLogActive}
+            aria-label={overlayYAxisLabel}
             onChange={(event) => {
               updateSlot(setSlots, slot.id, (entry) => ({
                 ...entry,
@@ -731,6 +736,7 @@ function SelectionSlotRow({
                 entry.overlayAxisMode === "linear" ? "log" : "linear",
             }));
           }}
+          aria-label={overlayLogLabel}
           title="Logarithmische Skala fuer diese obere Reihe"
           type="button"
         >
@@ -781,6 +787,7 @@ function SelectionSlotRow({
             checked={indicatorSeparateChecked}
             className="h-3.5 w-3.5 accent-slate-900"
             disabled={indicatorLogActive}
+            aria-label={indicatorYAxisLabel}
             onChange={(event) => {
               updateSlot(setSlots, slot.id, (entry) => ({
                 ...entry,
@@ -803,6 +810,7 @@ function SelectionSlotRow({
                 entry.indicatorAxisMode === "linear" ? "log" : "linear",
             }));
           }}
+          aria-label={indicatorLogLabel}
           title="Logarithmische Skala fuer diesen Indikator"
           type="button"
         >
@@ -1109,8 +1117,8 @@ export function SeriesWorkbench({ series, className }: Props) {
           </article>
         </div>
 
-        <div className="mt-2 flex min-h-0 flex-1 gap-2">
-          <aside className="w-[25rem] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2">
+        <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 lg:flex-row">
+          <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:w-[25rem]">
             <div className="border-slate-200 border-b px-1 pb-2">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
                 <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
@@ -1134,7 +1142,7 @@ export function SeriesWorkbench({ series, className }: Props) {
               </div>
             </div>
 
-            <div className="mt-2 flex h-[calc(100%-3.25rem)] min-h-0 flex-col gap-2 overflow-y-auto pr-1">
+            <div className="mt-2 flex max-h-[24rem] flex-col gap-2 overflow-y-auto pr-1 lg:h-[calc(100%-3.25rem)] lg:max-h-none lg:min-h-0">
               {slotDescriptors.map((slot) => (
                 <SelectionSlotRow
                   assetOptions={assetOptions}
@@ -1151,7 +1159,7 @@ export function SeriesWorkbench({ series, className }: Props) {
 
           <div className="min-h-0 min-w-0 flex-1">
             <div
-              className="grid h-full min-h-0"
+              className="grid min-h-[44rem] gap-2 lg:h-full lg:min-h-0 lg:gap-0"
               ref={chartStackRef}
               style={{
                 gridTemplateRows: `minmax(220px, ${chartSplit.toFixed(3)}fr) auto minmax(180px, ${(1 - chartSplit).toFixed(3)}fr)`,
@@ -1176,7 +1184,7 @@ export function SeriesWorkbench({ series, className }: Props) {
 
               <button
                 aria-label="Hohe zwischen oberem und unterem Chart anpassen"
-                className={`group my-2 flex shrink-0 touch-none items-center outline-none ${
+                className={`group my-2 hidden shrink-0 touch-none items-center outline-none lg:flex ${
                   isResizing ? "cursor-row-resize" : "cursor-ns-resize"
                 }`}
                 onKeyDown={(event) => {

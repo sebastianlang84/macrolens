@@ -10,6 +10,8 @@
 - Docker-Basis ist mit `apps/web/Dockerfile` und `docker-compose.yml` für stabilen Linux-Betrieb vorhanden; die App wird lokal bewusst auf `127.0.0.1:3001` veröffentlicht.
 - `docker-compose.yml` setzt explizite DNS-Server (`1.1.1.1`, `8.8.8.8`), weil der Docker-Resolver zuvor externe Datenquellen zeitweise nicht sauber auflösen konnte.
 - Die Workbench nutzt sechs feste Auswahl-Zeilen, synchronisierte obere/untere Charts, gemeinsamen X-Bereich (`3M`, `6M`, `1Y`, `2Y`, `Max`) und pro Reihe steuerbare Y-/Log-Achsen.
+- Die Workbench-Shell nutzt kein global erzwungenes One-Screen-Layout mehr; kleine Viewports stapeln Slot-Konfiguration und Charts vertikal, waehrend der manuelle Chart-Splitter nur noch auf `lg` aktiv ist.
+- Der visuelle Hover-Readout der Charts bleibt erhalten, erzeugt aber keine `aria-live`-Updates mehr bei jeder Mausbewegung; die Y-/`L`-Slot-Steuerung hat nun explizite zugaengliche Namen.
 - Für Asset-Indikatoren sind aktuell nur `RSI Score` und `RSI Score W` vorgesehen; passende `RSI 14`-Companion-Reihen werden bei Score-Auswahl automatisch mitgerendert.
 - `RSI Score` ist ein um `50` zentrierter Divergenz-Score aus Preis-/RSI-Regressionen mit DEMA-Glättung; `RSI Score W` basiert auf Monday-aggregierten Weekly-OHLC.
 - Divergenzmarker werden auf dem Score-Indikator selbst gerendert; die Referenzfenster für BTCUSD wurden am 2026-03-11 gegen TradingView validiert.
@@ -41,6 +43,5 @@
 
 ## Next Steps
 - `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
-- P0-A11y- und Responsive-Themen aus `TODO.md` abarbeiten.
 - Architektur-Refactors aus `TODO.md` priorisieren und nacheinander vertiefen.
 - Optional: Caching/DB einführen und Makro-Regeln schrittweise verfeinern.
