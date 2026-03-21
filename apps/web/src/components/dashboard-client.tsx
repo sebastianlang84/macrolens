@@ -4,9 +4,9 @@ import { format, parseISO } from "date-fns";
 import { SeriesWorkbench } from "@/components/series-workbench";
 import type { DashboardData } from "@/types/macro";
 
-type Props = {
+interface Props {
   data: DashboardData;
-};
+}
 
 export function DashboardClient({ data }: Props) {
   const generatedLabel = format(parseISO(data.generatedAt), "dd.MM.yyyy HH:mm");
@@ -18,8 +18,10 @@ export function DashboardClient({ data }: Props) {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(56,189,248,0.22),transparent_36%),radial-gradient(circle_at_90%_20%,rgba(16,185,129,0.18),transparent_32%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-sky-200">MacroLens</p>
-              <h1 className="text-base font-semibold tracking-tight md:text-lg">
+              <p className="font-medium text-[11px] text-sky-200 uppercase tracking-[0.22em]">
+                MacroLens
+              </p>
+              <h1 className="font-semibold text-base tracking-tight md:text-lg">
                 One-Screen Overlay Dashboard
               </h1>
             </div>
@@ -37,7 +39,7 @@ export function DashboardClient({ data }: Props) {
         </section>
 
         <div className="min-h-0 flex-1">
-          <SeriesWorkbench series={data.series} className="h-full" />
+          <SeriesWorkbench className="h-full" series={data.series} />
         </div>
       </div>
     </main>

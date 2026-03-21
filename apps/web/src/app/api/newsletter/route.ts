@@ -26,8 +26,12 @@ export async function GET() {
     const latestScore1d = score1d?.points.at(-1)?.value ?? null;
     const latestScore1w = score1w?.points.at(-1)?.value ?? null;
 
-    const dailyDivs = score1d ? buildRsiDivergenceMarkers(btcSeries, score1d) : [];
-    const weeklyDivs = score1w ? buildRsiDivergenceMarkers(btcSeries, score1w) : [];
+    const dailyDivs = score1d
+      ? buildRsiDivergenceMarkers(btcSeries, score1d)
+      : [];
+    const weeklyDivs = score1w
+      ? buildRsiDivergenceMarkers(btcSeries, score1w)
+      : [];
 
     // Latest divergences (global)
     const lastDailyDiv = dailyDivs.at(-1);
@@ -42,20 +46,24 @@ export async function GET() {
         weekly: latestScore1w,
       },
       divergences: {
-        daily: dailyDivs.slice(-3).map(d => ({
+        daily: dailyDivs.slice(-3).map((d) => ({
           date: d.date,
           direction: d.direction,
-          label: d.label
+          label: d.label,
         })),
-        weekly: weeklyDivs.slice(-3).map(d => ({
+        weekly: weeklyDivs.slice(-3).map((d) => ({
           date: d.date,
           direction: d.direction,
-          label: d.label
+          label: d.label,
         })),
         latest: {
-          daily: lastDailyDiv ? { date: lastDailyDiv.date, direction: lastDailyDiv.direction } : null,
-          weekly: lastWeeklyDiv ? { date: lastWeeklyDiv.date, direction: lastWeeklyDiv.direction } : null,
-        }
+          daily: lastDailyDiv
+            ? { date: lastDailyDiv.date, direction: lastDailyDiv.direction }
+            : null,
+          weekly: lastWeeklyDiv
+            ? { date: lastWeeklyDiv.date, direction: lastWeeklyDiv.direction }
+            : null,
+        },
       },
       warnings: data.warnings,
     };

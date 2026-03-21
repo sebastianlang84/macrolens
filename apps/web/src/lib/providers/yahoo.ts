@@ -1,8 +1,8 @@
 import YahooFinance from "yahoo-finance2";
-import { computeSeriesStats } from "@/lib/stats";
-import type { SeriesSpec } from "@/lib/series-catalog";
-import type { CandlePoint, MacroSeries, TimePoint } from "@/types/macro";
 import { z } from "zod";
+import type { SeriesSpec } from "@/lib/series-catalog";
+import { computeSeriesStats } from "@/lib/stats";
+import type { CandlePoint, MacroSeries, TimePoint } from "@/types/macro";
 
 const yahooFinance = new YahooFinance();
 
@@ -26,19 +26,23 @@ function periodStart(lookbackYears: number): Date {
 
 export async function fetchYahooSeries(spec: SeriesSpec): Promise<MacroSeries> {
   try {
-    const chartResult = yahooChartSchema.parse(await yahooFinance.chart(spec.providerId, {
-      period1: periodStart(spec.lookbackYears),
-      interval: "1d",
-    }));
+    const chartResult = yahooChartSchema.parse(
+      await yahooFinance.chart(spec.providerId, {
+        period1: periodStart(spec.lookbackYears),
+        interval: "1d",
+      })
+    );
 
     const candles: CandlePoint[] = (chartResult.quotes ?? [])
       .map((quote) => {
         if (
-          !quote.date ||
-          !Number.isFinite(quote.open ?? Number.NaN) ||
-          !Number.isFinite(quote.high ?? Number.NaN) ||
-          !Number.isFinite(quote.low ?? Number.NaN) ||
-          !Number.isFinite(quote.close ?? Number.NaN)
+          !(
+            quote.date &&
+            Number.isFinite(quote.open ?? Number.NaN) &&
+            Number.isFinite(quote.high ?? Number.NaN) &&
+            Number.isFinite(quote.low ?? Number.NaN) &&
+            Number.isFinite(quote.close ?? Number.NaN)
+          )
         ) {
           return null;
         }
@@ -72,12 +76,13 @@ export async function fetchYahooSeries(spec: SeriesSpec): Promise<MacroSeries> {
       stats: computeSeriesStats(points),
     };
   } catch (error) {
-    const errorMessage =
-      error instanceof z.ZodError
-        ? `Yahoo Response-Format unerwartet (${error.issues.length} Validierungsfehler)`
-        : error instanceof Error
-          ? error.message
-          : "Unbekannter Yahoo-Fehler";
+    let errorMessage = "Unbekannter Yahoo-Fehler";
+
+    if (error instanceof z.ZodError) {
+      errorMessage = `Yahoo Response-Format unerwartet (${error.issues.length} Validierungsfehler)`;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
 
     return {
       key: spec.key,

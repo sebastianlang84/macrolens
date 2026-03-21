@@ -1,8 +1,8 @@
 import { addDays, formatISO } from "date-fns";
 import { describe, expect, it } from "vitest";
 import {
-  buildRsiDivergenceMarkers,
   buildOverlayData,
+  buildRsiDivergenceMarkers,
   buildRsiScoreIndicators,
   buildRsiScoreSeries,
   buildWeeklyRsiScoreSeries,
@@ -16,13 +16,15 @@ function makeSeries(
   key: string,
   values: number[],
   candles?: CandlePoint[],
-  dates?: string[],
+  dates?: string[]
 ): MacroSeries {
   const pointDates =
     dates ??
     candles?.map((candle) => candle.date) ??
     values.map((_, idx) =>
-      formatISO(addDays(new Date("2026-01-01T00:00:00Z"), idx), { representation: "date" }),
+      formatISO(addDays(new Date("2026-01-01T00:00:00Z"), idx), {
+        representation: "date",
+      })
     );
 
   return {
@@ -49,12 +51,14 @@ function makeSeries(
 
 function makeDailyCandles(
   startDate: string,
-  entries: Array<{ close: number; high?: number; low?: number }>,
+  entries: Array<{ close: number; high?: number; low?: number }>
 ): CandlePoint[] {
   return entries.map((entry, idx) => {
     const close = entry.close;
     return {
-      date: formatISO(addDays(new Date(`${startDate}T00:00:00Z`), idx), { representation: "date" }),
+      date: formatISO(addDays(new Date(`${startDate}T00:00:00Z`), idx), {
+        representation: "date",
+      }),
       open: close,
       high: entry.high ?? close,
       low: entry.low ?? close,
@@ -105,17 +109,21 @@ describe("series-analysis", () => {
       "2026-01-01",
       Array.from({ length: 48 }, (_, index) => ({
         close: 100 + index * 0.6 + ((index % 6) - 2),
-      })),
+      }))
     );
-    const base = makeSeries("sp500", candles.map((candle) => candle.close), candles);
+    const base = makeSeries(
+      "sp500",
+      candles.map((candle) => candle.close),
+      candles
+    );
 
     const score = buildRsiScoreSeries(base);
 
     expect(score).not.toBeNull();
     expect(score?.key).toBe("rsi-score:sp500");
     expect((score?.points.length ?? 0) > 0).toBe(true);
-    expect(Number.isFinite(score?.points[0]?.value ?? NaN)).toBe(true);
-    expect(Number.isFinite(score?.stats.latestValue ?? NaN)).toBe(true);
+    expect(Number.isFinite(score?.points[0]?.value ?? Number.NaN)).toBe(true);
+    expect(Number.isFinite(score?.stats.latestValue ?? Number.NaN)).toBe(true);
   });
 
   it("builds daily and weekly RSI score indicators for a long enough asset series", () => {
@@ -123,9 +131,13 @@ describe("series-analysis", () => {
       "2025-01-01",
       Array.from({ length: 360 }, (_, idx) => ({
         close: 100 + idx * 0.2 + (idx % 9) - 4,
-      })),
+      }))
     );
-    const base = makeSeries("bitcoin", candles.map((candle) => candle.close), candles);
+    const base = makeSeries(
+      "bitcoin",
+      candles.map((candle) => candle.close),
+      candles
+    );
 
     const indicators = buildRsiScoreIndicators(base);
     const keys = indicators.map((series) => series.key);
@@ -148,7 +160,7 @@ describe("series-analysis", () => {
     const base = makeSeries(
       "sp500",
       candles.map((candle) => candle.close),
-      candles,
+      candles
     );
 
     const weekly = buildWeeklySeries(base);
@@ -171,9 +183,13 @@ describe("series-analysis", () => {
       "2025-01-06",
       Array.from({ length: 220 }, (_, idx) => ({
         close: 100 + idx * 0.5 + (idx % 5),
-      })),
+      }))
     );
-    const base = makeSeries("sp500", candles.map((candle) => candle.close), candles);
+    const base = makeSeries(
+      "sp500",
+      candles.map((candle) => candle.close),
+      candles
+    );
 
     const weeklyScore = buildWeeklyRsiScoreSeries(base);
 
@@ -184,30 +200,49 @@ describe("series-analysis", () => {
 
   it("marks bullish daily RSI score divergence from RSI pivots and candle lows", () => {
     const candles = makeDailyCandles("2026-02-01", [
-      { close: 110 }, { close: 109 }, { close: 108 }, { close: 107 }, { close: 106 },
-      { close: 105 }, { close: 104 }, { close: 103 }, { close: 102 }, { close: 101 },
-      { close: 100 }, { close: 99, low: 90 }, { close: 101 }, { close: 102 }, { close: 103 },
-      { close: 104 }, { close: 105 }, { close: 106 }, { close: 107 }, { close: 108 },
-      { close: 109 }, { close: 110 }, { close: 111 }, { close: 112, low: 85 }, { close: 113 },
-      { close: 114 }, { close: 115 }, { close: 116 }, { close: 117 },
+      { close: 110 },
+      { close: 109 },
+      { close: 108 },
+      { close: 107 },
+      { close: 106 },
+      { close: 105 },
+      { close: 104 },
+      { close: 103 },
+      { close: 102 },
+      { close: 101 },
+      { close: 100 },
+      { close: 99, low: 90 },
+      { close: 101 },
+      { close: 102 },
+      { close: 103 },
+      { close: 104 },
+      { close: 105 },
+      { close: 106 },
+      { close: 107 },
+      { close: 108 },
+      { close: 109 },
+      { close: 110 },
+      { close: 111 },
+      { close: 112, low: 85 },
+      { close: 113 },
+      { close: 114 },
+      { close: 115 },
+      { close: 116 },
+      { close: 117 },
     ]);
     const asset = makeSeries(
       "sp500",
       candles.map((candle) => candle.close),
-      candles,
+      candles
     );
     const indicator = makeSeries(
       "rsi-score:sp500",
       [
-        90, 88, 86, 84, 82,
-        80, 78, 76, 74, 72,
-        70, 60, 71, 73, 75,
-        77, 79, 81, 83, 85,
-        87, 89, 91, 65, 92,
-        94, 96, 98, 100,
+        90, 88, 86, 84, 82, 80, 78, 76, 74, 72, 70, 60, 71, 73, 75, 77, 79, 81,
+        83, 85, 87, 89, 91, 65, 92, 94, 96, 98, 100,
       ],
       undefined,
-      candles.map((candle) => candle.date),
+      candles.map((candle) => candle.date)
     );
 
     const markers = buildRsiDivergenceMarkers(asset, indicator);
@@ -217,23 +252,122 @@ describe("series-analysis", () => {
         direction: "bullish",
         startDate: "2026-02-12",
         date: "2026-02-24",
-      }),
+      })
+    );
+  });
+
+  it("ignores bullish daily divergence when the score does not improve enough", () => {
+    const candles = makeDailyCandles("2026-02-01", [
+      { close: 110 },
+      { close: 109 },
+      { close: 108 },
+      { close: 107 },
+      { close: 106 },
+      { close: 105 },
+      { close: 104 },
+      { close: 103 },
+      { close: 102 },
+      { close: 101 },
+      { close: 100 },
+      { close: 99, low: 90 },
+      { close: 101 },
+      { close: 102 },
+      { close: 103 },
+      { close: 104 },
+      { close: 105 },
+      { close: 106 },
+      { close: 107 },
+      { close: 108 },
+      { close: 109 },
+      { close: 110 },
+      { close: 111 },
+      { close: 112, low: 85 },
+      { close: 113 },
+      { close: 114 },
+      { close: 115 },
+      { close: 116 },
+      { close: 117 },
+    ]);
+    const asset = makeSeries(
+      "sp500",
+      candles.map((candle) => candle.close),
+      candles
+    );
+    const indicator = makeSeries(
+      "rsi-score:sp500",
+      [
+        90, 88, 86, 84, 82, 80, 78, 76, 74, 72, 70, 60, 71, 73, 75, 77, 79, 81,
+        83, 85, 87, 89, 91, 61, 92, 94, 96, 98, 100,
+      ],
+      undefined,
+      candles.map((candle) => candle.date)
+    );
+
+    const markers = buildRsiDivergenceMarkers(asset, indicator);
+
+    expect(markers).not.toContainEqual(
+      expect.objectContaining({
+        direction: "bullish",
+        startDate: "2026-02-12",
+        date: "2026-02-24",
+      })
     );
   });
 
   it("marks weekly bearish RSI score divergences from Monday-aligned weekly highs", () => {
     const weeklyDates = [
-      "2024-10-28", "2024-11-04", "2024-11-11", "2024-11-18", "2024-11-25",
-      "2024-12-02", "2024-12-09", "2024-12-16", "2024-12-23", "2024-12-30",
-      "2025-01-06", "2025-01-13", "2025-01-20", "2025-01-27", "2025-02-03",
-      "2025-02-10", "2025-02-17", "2025-02-24", "2025-03-03", "2025-03-10",
-      "2025-03-17", "2025-03-24", "2025-03-31", "2025-04-07", "2025-04-14",
-      "2025-04-21", "2025-04-28", "2025-05-05", "2025-05-12", "2025-05-19",
-      "2025-05-26", "2025-06-02", "2025-06-09", "2025-06-16", "2025-06-23",
-      "2025-06-30", "2025-07-07", "2025-07-14", "2025-07-21", "2025-07-28",
-      "2025-08-04", "2025-08-11", "2025-08-18", "2025-08-25", "2025-09-01",
-      "2025-09-08", "2025-09-15", "2025-09-22", "2025-09-29", "2025-10-06",
-      "2025-10-13", "2025-10-20",
+      "2024-10-28",
+      "2024-11-04",
+      "2024-11-11",
+      "2024-11-18",
+      "2024-11-25",
+      "2024-12-02",
+      "2024-12-09",
+      "2024-12-16",
+      "2024-12-23",
+      "2024-12-30",
+      "2025-01-06",
+      "2025-01-13",
+      "2025-01-20",
+      "2025-01-27",
+      "2025-02-03",
+      "2025-02-10",
+      "2025-02-17",
+      "2025-02-24",
+      "2025-03-03",
+      "2025-03-10",
+      "2025-03-17",
+      "2025-03-24",
+      "2025-03-31",
+      "2025-04-07",
+      "2025-04-14",
+      "2025-04-21",
+      "2025-04-28",
+      "2025-05-05",
+      "2025-05-12",
+      "2025-05-19",
+      "2025-05-26",
+      "2025-06-02",
+      "2025-06-09",
+      "2025-06-16",
+      "2025-06-23",
+      "2025-06-30",
+      "2025-07-07",
+      "2025-07-14",
+      "2025-07-21",
+      "2025-07-28",
+      "2025-08-04",
+      "2025-08-11",
+      "2025-08-18",
+      "2025-08-25",
+      "2025-09-01",
+      "2025-09-08",
+      "2025-09-15",
+      "2025-09-22",
+      "2025-09-29",
+      "2025-10-06",
+      "2025-10-13",
+      "2025-10-20",
     ];
     const highsByDate = new Map([
       ["2024-12-09", 100],
@@ -262,13 +396,13 @@ describe("series-analysis", () => {
     const asset = makeSeries(
       "bitcoin",
       candles.map((candle) => candle.close),
-      candles,
+      candles
     );
     const indicator = makeSeries(
       "rsi-scorew:bitcoin",
       weeklyDates.map((date) => indicatorByDate.get(date) ?? 35),
       undefined,
-      weeklyDates,
+      weeklyDates
     );
 
     const markers = buildRsiDivergenceMarkers(asset, indicator);
@@ -278,21 +412,21 @@ describe("series-analysis", () => {
         direction: "bearish",
         startDate: "2024-12-09",
         date: "2025-01-20",
-      }),
+      })
     );
     expect(markers).toContainEqual(
       expect.objectContaining({
         direction: "bearish",
         startDate: "2025-01-20",
         date: "2025-05-19",
-      }),
+      })
     );
     expect(markers).toContainEqual(
       expect.objectContaining({
         direction: "bearish",
         startDate: "2025-07-07",
         date: "2025-09-29",
-      }),
+      })
     );
   });
 });

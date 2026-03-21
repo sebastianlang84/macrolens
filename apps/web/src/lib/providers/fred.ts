@@ -1,7 +1,7 @@
-import type { MacroSeries, TimePoint } from "@/types/macro";
-import { computeSeriesStats } from "@/lib/stats";
-import type { SeriesSpec } from "@/lib/series-catalog";
 import { z } from "zod";
+import type { SeriesSpec } from "@/lib/series-catalog";
+import { computeSeriesStats } from "@/lib/stats";
+import type { MacroSeries, TimePoint } from "@/types/macro";
 
 const fredObservationSchema = z.object({
   date: z.string(),
@@ -49,7 +49,7 @@ export async function fetchFredSeries(spec: SeriesSpec): Promise<MacroSeries> {
   try {
     const response = await fetch(
       `https://api.stlouisfed.org/fred/series/observations?${params.toString()}`,
-      { cache: "no-store" },
+      { cache: "no-store" }
     );
 
     if (!response.ok) {
@@ -80,12 +80,13 @@ export async function fetchFredSeries(spec: SeriesSpec): Promise<MacroSeries> {
       stats: computeSeriesStats(points),
     };
   } catch (error) {
-    const errorMessage =
-      error instanceof z.ZodError
-        ? `FRED Response-Format unerwartet (${error.issues.length} Validierungsfehler)`
-        : error instanceof Error
-          ? error.message
-          : "Unbekannter FRED-Fehler";
+    let errorMessage = "Unbekannter FRED-Fehler";
+
+    if (error instanceof z.ZodError) {
+      errorMessage = `FRED Response-Format unerwartet (${error.issues.length} Validierungsfehler)`;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
 
     return {
       key: spec.key,

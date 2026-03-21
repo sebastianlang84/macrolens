@@ -1,12 +1,20 @@
-import type { DashboardData, MacroSeries, MacroSignal, TimePoint } from "@/types/macro";
 import { formatNumber } from "@/lib/formatters";
+import type {
+  DashboardData,
+  MacroSeries,
+  MacroSignal,
+  TimePoint,
+} from "@/types/macro";
 
-function getSeries(series: MacroSeries[], key: string): MacroSeries | undefined {
+function getSeries(
+  series: MacroSeries[],
+  key: string
+): MacroSeries | undefined {
   return series.find((item) => item.key === key);
 }
 
 function lastPoint(points: TimePoint[]): TimePoint | null {
-  return points.length > 0 ? points[points.length - 1] : null;
+  return points.at(-1) ?? null;
 }
 
 function movingAverage(points: TimePoint[], window: number): number | null {
@@ -19,12 +27,20 @@ function movingAverage(points: TimePoint[], window: number): number | null {
   return sum / slice.length;
 }
 
-function pickPointNearEnd(points: TimePoint[], daysBack: number): TimePoint | null {
+function pickPointNearEnd(
+  points: TimePoint[],
+  daysBack: number
+): TimePoint | null {
   if (points.length === 0) {
     return null;
   }
 
-  const latestTs = new Date(points[points.length - 1].date).getTime();
+  const latestPoint = points.at(-1);
+  if (!latestPoint) {
+    return null;
+  }
+
+  const latestTs = new Date(latestPoint.date).getTime();
   const targetTs = latestTs - daysBack * 24 * 60 * 60 * 1000;
   let selected: TimePoint | null = null;
 
@@ -43,7 +59,7 @@ function pickPointNearEnd(points: TimePoint[], daysBack: number): TimePoint | nu
 function trailingReturn(points: TimePoint[], daysBack: number): number | null {
   const end = lastPoint(points);
   const start = pickPointNearEnd(points, daysBack);
-  if (!end || !start || start.value === 0) {
+  if (!(end && start) || start.value === 0) {
     return null;
   }
   return ((end.value - start.value) / start.value) * 100;
@@ -53,24 +69,28 @@ function monthlyLevelChange(points: TimePoint[]): number | null {
   if (points.length < 2) {
     return null;
   }
-  const end = points[points.length - 1];
-  const prev = points[points.length - 2];
+  const end = points.at(-1);
+  const prev = points.at(-2);
+  if (!(end && prev)) {
+    return null;
+  }
+
   return end.value - prev.value;
 }
 
-function levelChangeOverDays(points: TimePoint[], daysBack: number): number | null {
+function levelChangeOverDays(
+  points: TimePoint[],
+  daysBack: number
+): number | null {
   const end = lastPoint(points);
   const start = pickPointNearEnd(points, daysBack);
-  if (!end || !start) {
+  if (!(end && start)) {
     return null;
   }
   return end.value - start.value;
 }
 
-function addSignal(
-  signals: MacroSignal[],
-  signal: MacroSignal | null,
-): void {
+function addSignal(signals: MacroSignal[], signal: MacroSignal | null): void {
   if (signal) {
     signals.push(signal);
   }
@@ -89,7 +109,8 @@ function volatilitySignal(series: MacroSeries[]): MacroSignal | null {
       label: "Volatilitätsregime",
       tone: "negative",
       value: `${formatNumber(value, 1)} VIX`,
-      summary: "Erhöhte Risikoaversion; Markt reagiert sensibler auf Makro-News.",
+      summary:
+        "Erhöhte Risikoaversion; Markt reagiert sensibler auf Makro-News.",
     };
   }
 
@@ -108,7 +129,8 @@ function volatilitySignal(series: MacroSeries[]): MacroSignal | null {
     label: "Volatilitätsregime",
     tone: "neutral",
     value: `${formatNumber(value, 1)} VIX`,
-    summary: "Mittlere Unsicherheit; kein klares Stress- oder Sorglosigkeits-Signal.",
+    summary:
+      "Mittlere Unsicherheit; kein klares Stress- oder Sorglosigkeits-Signal.",
   };
 }
 
@@ -141,7 +163,7 @@ function trendSignal(series: MacroSeries[]): MacroSignal | null {
 function breadthSignal(series: MacroSeries[]): MacroSignal | null {
   const spx = getSeries(series, "sp500");
   const ew = getSeries(series, "sp500_equal_weight");
-  if (!spx || !ew) {
+  if (!(spx && ew)) {
     return null;
   }
 
@@ -152,18 +174,25 @@ function breadthSignal(series: MacroSeries[]): MacroSignal | null {
   }
 
   const spread = ew3m - spx3m;
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary = "Breitenbild ist gemischt; keine klare Divergenz.";
+
+  if (spread > 1) {
+    tone = "positive";
+    summary =
+      "Equal Weight schlägt den Index: Aufwärtsphase wirkt breiter abgestützt.";
+  } else if (spread < -1) {
+    tone = "negative";
+    summary =
+      "Equal Weight hinkt hinterher: Führung ist enger (Mega-Caps dominieren).";
+  }
 
   return {
     id: "breadth",
     label: "Marktbreite (Equal Weight vs. S&P)",
-    tone: spread > 1 ? "positive" : spread < -1 ? "negative" : "neutral",
+    tone,
     value: `${spread >= 0 ? "+" : ""}${formatNumber(spread, 1)} pp`,
-    summary:
-      spread > 1
-        ? "Equal Weight schlägt den Index: Aufwärtsphase wirkt breiter abgestützt."
-        : spread < -1
-          ? "Equal Weight hinkt hinterher: Führung ist enger (Mega-Caps dominieren)."
-          : "Breitenbild ist gemischt; keine klare Divergenz.",
+    summary,
   };
 }
 
@@ -174,17 +203,25 @@ function oilSignal(series: MacroSeries[]): MacroSignal | null {
     return null;
   }
 
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary = "Öl bewegt sich ohne klaren makroökonomischen Schockimpuls.";
+
+  if (oil3m > 15) {
+    tone = "negative";
+    summary =
+      "Starker Ölpreisanstieg kann Inflations- und Margendruck erhöhen.";
+  } else if (oil3m < -10) {
+    tone = "positive";
+    summary =
+      "Fallende Energiepreise entlasten tendenziell Inflation und Kosten.";
+  }
+
   return {
     id: "oil",
     label: "Ölpreis-Impuls (3M)",
-    tone: oil3m > 15 ? "negative" : oil3m < -10 ? "positive" : "neutral",
+    tone,
     value: `${oil3m >= 0 ? "+" : ""}${formatNumber(oil3m, 1)} %`,
-    summary:
-      oil3m > 15
-        ? "Starker Ölpreisanstieg kann Inflations- und Margendruck erhöhen."
-        : oil3m < -10
-          ? "Fallende Energiepreise entlasten tendenziell Inflation und Kosten."
-          : "Öl bewegt sich ohne klaren makroökonomischen Schockimpuls.",
+    summary,
   };
 }
 
@@ -199,17 +236,25 @@ function payrollSignal(series: MacroSeries[]): MacroSignal | null {
     return null;
   }
 
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary = "Arbeitsmarkt wächst, aber ohne klaren Beschleunigungsimpuls.";
+
+  if (delta > 80) {
+    tone = "positive";
+    summary =
+      "Beschäftigung wächst weiter solide; Rezessionssignal aktuell schwächer.";
+  } else if (delta < 20) {
+    tone = "negative";
+    summary =
+      "Schwaches Beschäftigungswachstum; Konjunkturabkühlung wahrscheinlicher.";
+  }
+
   return {
     id: "payrolls",
     label: "Arbeitsmarkt-Momentum",
-    tone: delta > 80 ? "positive" : delta < 20 ? "negative" : "neutral",
+    tone,
     value: `${formatNumber(delta, 0)} Tsd`,
-    summary:
-      delta > 80
-        ? "Beschäftigung wächst weiter solide; Rezessionssignal aktuell schwächer."
-        : delta < 20
-          ? "Schwaches Beschäftigungswachstum; Konjunkturabkühlung wahrscheinlicher."
-          : "Arbeitsmarkt wächst, aber ohne klaren Beschleunigungsimpuls.",
+    summary,
   };
 }
 
@@ -221,10 +266,17 @@ function policySignal(series: MacroSeries[]): MacroSignal | null {
     return null;
   }
 
+  let tone: MacroSignal["tone"] = "neutral";
+  if (latest >= 4.5) {
+    tone = "negative";
+  } else if (latest <= 2) {
+    tone = "positive";
+  }
+
   return {
     id: "policy",
     label: "Zinsregime (Fed Funds)",
-    tone: latest >= 4.5 ? "negative" : latest <= 2 ? "positive" : "neutral",
+    tone,
     value: `${formatNumber(latest, 2)} %`,
     summary:
       change1y !== null && Math.abs(change1y) > 5
@@ -241,18 +293,25 @@ function yieldCurveSignal(series: MacroSeries[]): MacroSignal | null {
   }
 
   const slope = y10 - y2;
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary = "Flache Kurve: Übergangsphase, Richtung bleibt datenabhängig.";
+
+  if (slope > 0.5) {
+    tone = "positive";
+    summary =
+      "Normale/steilere Kurve: Rezessionssignal aus der Zinskurve aktuell schwächer.";
+  } else if (slope < 0) {
+    tone = "negative";
+    summary =
+      "Inverse Kurve: klassisches Warnsignal für Wachstums-/Rezessionsrisiken.";
+  }
 
   return {
     id: "yield-curve",
     label: "Yield Curve (10Y-2Y)",
-    tone: slope > 0.5 ? "positive" : slope < 0 ? "negative" : "neutral",
+    tone,
     value: `${slope >= 0 ? "+" : ""}${formatNumber(slope, 2)} pp`,
-    summary:
-      slope > 0.5
-        ? "Normale/steilere Kurve: Rezessionssignal aus der Zinskurve aktuell schwächer."
-        : slope < 0
-          ? "Inverse Kurve: klassisches Warnsignal für Wachstums-/Rezessionsrisiken."
-          : "Flache Kurve: Übergangsphase, Richtung bleibt datenabhängig.",
+    summary,
   };
 }
 
@@ -263,17 +322,25 @@ function inflationSignal(series: MacroSeries[]): MacroSignal | null {
     return null;
   }
 
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary =
+    "Inflation liegt in einer Zwischenzone; zusätzliche Daten bleiben wichtig.";
+
+  if (yoy > 3.5) {
+    tone = "negative";
+    summary = "Höhere Inflation kann Zinsdruck und Bewertungsrisiken erhöhen.";
+  } else if (yoy < 2.5) {
+    tone = "positive";
+    summary =
+      "Moderater Preisauftrieb entlastet tendenziell das Zins-/Bewertungsumfeld.";
+  }
+
   return {
     id: "inflation",
     label: "Inflationsimpuls (CPI YoY, Proxy)",
-    tone: yoy > 3.5 ? "negative" : yoy < 2.5 ? "positive" : "neutral",
+    tone,
     value: `${yoy >= 0 ? "+" : ""}${formatNumber(yoy, 1)} %`,
-    summary:
-      yoy > 3.5
-        ? "Höhere Inflation kann Zinsdruck und Bewertungsrisiken erhöhen."
-        : yoy < 2.5
-          ? "Moderater Preisauftrieb entlastet tendenziell das Zins-/Bewertungsumfeld."
-          : "Inflation liegt in einer Zwischenzone; zusätzliche Daten bleiben wichtig.",
+    summary,
   };
 }
 
@@ -285,17 +352,26 @@ function unemploymentSignal(series: MacroSeries[]): MacroSignal | null {
     return null;
   }
 
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary =
+    "Arbeitslosenquote relativ stabil; kein starkes Konjunktursignal aus diesem Indikator.";
+
+  if (change3m > 0.4) {
+    tone = "negative";
+    summary =
+      "Arbeitslosenquote steigt spürbar: Wachstumsbild schwächt sich tendenziell ab.";
+  } else if (change3m < -0.2) {
+    tone = "positive";
+    summary =
+      "Arbeitsmarkt verbessert sich über 3 Monate; Konjunkturbild stabiler.";
+  }
+
   return {
     id: "unemployment",
     label: "Arbeitslosenquote (3M Delta)",
-    tone: change3m > 0.4 ? "negative" : change3m < -0.2 ? "positive" : "neutral",
+    tone,
     value: `${formatNumber(latest, 1)} % (${change3m >= 0 ? "+" : ""}${formatNumber(change3m, 1)} pp)`,
-    summary:
-      change3m > 0.4
-        ? "Arbeitslosenquote steigt spürbar: Wachstumsbild schwächt sich tendenziell ab."
-        : change3m < -0.2
-          ? "Arbeitsmarkt verbessert sich über 3 Monate; Konjunkturbild stabiler."
-          : "Arbeitslosenquote relativ stabil; kein starkes Konjunktursignal aus diesem Indikator.",
+    summary,
   };
 }
 
@@ -320,17 +396,26 @@ function creditSignal(series: MacroSeries[]): MacroSignal | null {
     hyIgGap < 3.0 &&
     (hy3mDelta === null || hy3mDelta < 0.3) &&
     (ig3mDelta === null || ig3mDelta < 0.15);
+  let tone: MacroSignal["tone"] = "neutral";
+  let summary =
+    "Credit-Spreads senden ein gemischtes Signal; weder klarer Stress noch klare Entspannung.";
+
+  if (stress) {
+    tone = "negative";
+    summary =
+      "Breitere Credit-Spreads deuten auf steigende Risikoaversion und straffere Finanzierungsbedingungen hin.";
+  } else if (easy) {
+    tone = "positive";
+    summary =
+      "Enge Credit-Spreads sprechen für entspanntes Risikosentiment und leichtere Finanzierung.";
+  }
 
   return {
     id: "credit",
     label: "Credit-Regime (HY/IG Spreads)",
-    tone: stress ? "negative" : easy ? "positive" : "neutral",
+    tone,
     value: `HY ${formatNumber(hyLatest, 2)} / IG ${formatNumber(igLatest, 2)} %`,
-    summary: stress
-      ? "Breitere Credit-Spreads deuten auf steigende Risikoaversion und straffere Finanzierungsbedingungen hin."
-      : easy
-        ? "Enge Credit-Spreads sprechen für entspanntes Risikosentiment und leichtere Finanzierung."
-        : "Credit-Spreads senden ein gemischtes Signal; weder klarer Stress noch klare Entspannung.",
+    summary,
   };
 }
 
@@ -351,12 +436,19 @@ export function deriveMacroSignals(series: MacroSeries[]): MacroSignal[] {
   return signals;
 }
 
-export function attachWarnings(baseWarnings: string[], data: DashboardData): string[] {
+export function attachWarnings(
+  baseWarnings: string[],
+  data: DashboardData
+): string[] {
   const warnings = [...baseWarnings];
 
-  const missing = data.series.filter((series) => series.error).map((series) => series.label);
+  const missing = data.series
+    .filter((series) => series.error)
+    .map((series) => series.label);
   if (missing.length > 0) {
-    warnings.push(`Einige Serien konnten nicht geladen werden: ${missing.join(", ")}.`);
+    warnings.push(
+      `Einige Serien konnten nicht geladen werden: ${missing.join(", ")}.`
+    );
   }
 
   const proxies = data.series

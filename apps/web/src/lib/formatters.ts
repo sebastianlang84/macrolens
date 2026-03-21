@@ -31,4 +31,3 @@ export function formatPctDelta(value: number | null): string {
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${formatNumber(value, 1)} %`;
 }
-

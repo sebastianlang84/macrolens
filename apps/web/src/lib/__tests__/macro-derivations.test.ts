@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import type { MacroSeries, SeriesUnit, TimePoint } from "@/types/macro";
 import { deriveMacroSignals } from "../macro-derivations";
 import { computeSeriesStats } from "../stats";
-import type { MacroSeries, SeriesUnit, TimePoint } from "@/types/macro";
 
 function dailySeries(startDate: string, values: number[]): TimePoint[] {
   const start = new Date(startDate);
@@ -17,7 +17,11 @@ function dailySeries(startDate: string, values: number[]): TimePoint[] {
   });
 }
 
-function makeSeries(key: string, unit: SeriesUnit, points: TimePoint[]): MacroSeries {
+function makeSeries(
+  key: string,
+  unit: SeriesUnit,
+  points: TimePoint[]
+): MacroSeries {
   return {
     key,
     label: key,
@@ -37,7 +41,10 @@ function toneOf(signals: ReturnType<typeof deriveMacroSignals>, id: string) {
 
 describe("deriveMacroSignals", () => {
   it("derives expected tones for a mixed macro regime", () => {
-    const oilTrend = Array.from({ length: 120 }, (_, index) => 50 + index * 0.5);
+    const oilTrend = Array.from(
+      { length: 120 },
+      (_, index) => 50 + index * 0.5
+    );
 
     const signals = deriveMacroSignals([
       makeSeries(
@@ -45,26 +52,35 @@ describe("deriveMacroSignals", () => {
         "index",
         dailySeries(
           "2025-01-01",
-          Array.from({ length: 220 }, (_, index) => 100 + index),
-        ),
+          Array.from({ length: 220 }, (_, index) => 100 + index)
+        )
       ),
       makeSeries(
         "sp500_equal_weight",
         "usd",
         dailySeries(
           "2025-01-01",
-          Array.from({ length: 220 }, (_, index) => (index < 130 ? 100 + index : 230)),
-        ),
+          Array.from({ length: 220 }, (_, index) =>
+            index < 130 ? 100 + index : 230
+          )
+        )
       ),
-      makeSeries("vix", "index", dailySeries("2025-07-01", Array.from({ length: 10 }, () => 28))),
+      makeSeries(
+        "vix",
+        "index",
+        dailySeries(
+          "2025-07-01",
+          Array.from({ length: 10 }, () => 28)
+        )
+      ),
       makeSeries("oil", "usd", dailySeries("2025-07-01", oilTrend)),
       makeSeries("fedfunds", "percent", [
         { date: "2024-01-01", value: 1.5 },
         { date: "2025-01-01", value: 5.0 },
       ]),
       makeSeries("payrolls", "thousand_persons", [
-        { date: "2025-11-01", value: 150000 },
-        { date: "2025-12-01", value: 150120 },
+        { date: "2025-11-01", value: 150_000 },
+        { date: "2025-12-01", value: 150_120 },
       ]),
     ]);
 

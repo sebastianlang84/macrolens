@@ -23,6 +23,11 @@
 - [x] Weitere FRED-Serien hinzufügen (z. B. `CPIAUCSL`, `UNRATE`, `DGS10`, `DGS2`).
 - [x] Yield-Curve- und Inflations-/Arbeitsmarkt-Signale in `apps/web/src/lib/macro-derivations.ts` ergänzen.
 - [x] Credit-Signale ergänzen (z. B. HY-/IG-Spreads oder Credit-Spread-Proxies).
+- [ ] Evaluieren, wie aktuelle Makro-Eventdaten und Releases in MacroLens kommen koennen, z. B. `Core PCE MoM`, `GDP Growth QoQ`, `Durable Goods Orders`, `JOLTs Job Openings`, inklusive `actual / expected / prior` und Ueberraschung. Diskutieren und bewerten: direkte APIs (z. B. `FRED`, wenn verfuegbar), Webseiten/Provider wie `tradingeconomics.com`, spezialisierte Quellen wie `creditspreadalert.com`, Mail-Ingestion fuer Event-Mails, sowie RSS-Feeds wie `finanznachrichten.de`. Fuer jede Option Qualitaet, Lizenz/Scraping-Risiko, Latenz, Historie, Normalisierung und Betriebsaufwand bewerten.
+- [ ] Wochenkerzen-Ansicht fuer MacroLens-Workbench/Charts ergaenzen (UI-Umschaltung fuer Daily/Weekly, nicht Pine).
+- [ ] Strategy-Backtester analog zu TradingView in MacroLens einbauen.
+- [ ] Sicherstellen, dass der Backtest immer auf genau demselben Zeitbereich laeuft, der im BTC-Chart oder aktuell gewaehlten Asset-Chart eingestellt ist.
+- [ ] Renditegegenueberstellung fuer denselben Zeitraum und dasselbe Asset anzeigen: `Buy & Hold` vs. `Trading-Strategie`.
 - [x] Datenbank/Caching evaluieren (`PostgreSQL + Prisma`, optional TimescaleDB) – *Evaluation in docs/evaluation-db-caching.md*.
 - [x] Observability planen (strukturierte Logs, Fehlertracking, Metriken) – *Basis-Timing-Logging integriert*.
 - [x] Accessibility-Review durchführen (Kontraste, Keyboard, Screenreader-Basis) – *Schriftgrößen & ARIA-Roles optimiert*.

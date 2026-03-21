@@ -1,39 +1,37 @@
-import { fetchYahooSeries } from './src/lib/providers/yahoo';
-import { buildRsiDivergenceMarkers, buildRsiScoreSeries, buildWeeklyRsiScoreSeries } from './src/lib/series-analysis';
+import { fetchYahooSeries } from "./src/lib/providers/yahoo";
+import {
+  buildRsiDivergenceMarkers,
+  buildRsiScoreIndicators,
+} from "./src/lib/series-analysis";
+import { SERIES_CATALOG } from "./src/lib/series-catalog";
 
 async function main() {
-  const btcSeries = await fetchYahooSeries({
-    key: 'bitcoin',
-    label: 'Bitcoin',
-    shortLabel: 'BTC',
-    source: 'yahoo',
-    unit: 'usd',
-    description: 'Bitcoin Spotpreis',
-    color: '#f59e0b',
-    providerId: 'BTC-USD',
-    lookbackYears: 2,
-  });
-  const score1d = buildRsiScoreSeries(btcSeries);
-  if (!score1d) {
-    throw new Error('Failed to build 1D RSI score');
+  const btcItem = SERIES_CATALOG.find((i) => i.key === "bitcoin");
+  if (!btcItem) {
+    throw new Error("Bitcoin missing in catalog");
   }
-  const score1w = buildWeeklyRsiScoreSeries(btcSeries);
-  if (!score1w) {
-    throw new Error('Failed to build 1W RSI score');
-  }
-  
-  const div1d = buildRsiDivergenceMarkers(btcSeries, score1d);
-  const div1w = buildRsiDivergenceMarkers(btcSeries, score1w);
-  
-  console.log('--- 1D Divergences ---');
-  console.log(JSON.stringify((div1d || []).slice(-5), null, 2)); 
-  
-  console.log('--- 1W Divergences ---');
-  console.log(JSON.stringify((div1w || []).slice(-5), null, 2)); 
-  
-  console.log('--- Current RSI Score ---');
-  console.log('1D Score:', score1d.points?.[score1d.points.length - 1]?.value);
-  console.log('1W Score:', score1w.points?.[score1w.points.length - 1]?.value);
+
+  const btcSeries = await fetchYahooSeries(btcItem);
+  const indicators = buildRsiScoreIndicators(btcSeries);
+  const rsi1d = indicators.find((indicator) =>
+    indicator.key.startsWith("rsi-score:")
+  );
+  const rsi1w = indicators.find((indicator) =>
+    indicator.key.startsWith("rsi-scorew:")
+  );
+  const div1d = rsi1d ? buildRsiDivergenceMarkers(btcSeries, rsi1d) : [];
+  const div1w = rsi1w ? buildRsiDivergenceMarkers(btcSeries, rsi1w) : [];
+
+  console.log(
+    JSON.stringify(
+      {
+        "1d": { rsi: rsi1d?.points.at(-1) ?? null, div: div1d.slice(-3) },
+        "1w": { rsi: rsi1w?.points.at(-1) ?? null, div: div1w.slice(-3) },
+      },
+      null,
+      2
+    )
+  );
 }
 
 main().catch(console.error);

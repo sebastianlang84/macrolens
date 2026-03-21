@@ -1,7 +1,8 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { format, parseISO, subMonths, subYears } from "date-fns";
+import type { Dispatch, SetStateAction } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -24,10 +25,10 @@ import {
 } from "@/lib/series-analysis";
 import type { MacroSeries } from "@/types/macro";
 
-type Props = {
-  series: MacroSeries[];
+interface Props {
   className?: string;
-};
+  series: MacroSeries[];
+}
 
 type OverlayRow = {
   date: string;
@@ -35,22 +36,22 @@ type OverlayRow = {
   dateLabel: string;
 } & Record<string, number | string>;
 
-type ChartPanelProps = {
-  title: string;
-  subtitle: string;
-  series: MacroSeries[];
-  rows: OverlayRow[];
+interface ChartPanelProps {
+  axisModeByKey: Map<string, AxisMode>;
+  emptyMessage: string;
+  isReady: boolean;
   markers?: ChartMarker[];
+  onXRangeChange: (preset: XRangePreset) => void;
+  rows: OverlayRow[];
+  separateYAxisKeys: Set<string>;
+  series: MacroSeries[];
+  subtitle: string;
+  title: string;
   xDomain: [number, number];
   xRangePreset: XRangePreset;
-  onXRangeChange: (preset: XRangePreset) => void;
-  isReady: boolean;
-  axisModeByKey: Map<string, AxisMode>;
-  separateYAxisKeys: Set<string>;
-  emptyMessage: string;
-};
+}
 
-type HoverSnapshot = {
+interface HoverSnapshot {
   dateLabel: string;
   items: Array<{
     key: string;
@@ -58,35 +59,44 @@ type HoverSnapshot = {
     value: number;
     color: string;
   }>;
-};
+}
 
-type ChartMarker = {
+interface ChartMarker {
+  color: string;
+  dateTs: number;
+  indicatorKey: string;
   key: string;
   startDateTs: number;
   startValue: number;
-  dateTs: number;
   value: number;
-  color: string;
-  indicatorKey: string;
-};
+}
 
-type SelectionSlot = {
+interface SelectionSlot {
   id: string;
-  seriesKey: string;
+  indicatorAxisMode: AxisMode;
   indicatorKey: string;
-  overlaySeparateYAxis: boolean;
   indicatorSeparateYAxis: boolean;
   overlayAxisMode: AxisMode;
-  indicatorAxisMode: AxisMode;
-};
+  overlaySeparateYAxis: boolean;
+  seriesKey: string;
+}
 
-type SlotDescriptor = {
-  id: string;
-  selectedSeries: MacroSeries | null;
-  indicatorOptions: MacroSeries[];
+interface SlotDescriptor {
   effectiveIndicatorKey: string;
+  id: string;
+  indicatorOptions: MacroSeries[];
   selectedIndicator: MacroSeries | null;
-};
+  selectedSeries: MacroSeries | null;
+}
+
+interface SelectionSlotRowProps {
+  assetOptions: MacroSeries[];
+  deferredSelectableSeries: MacroSeries[];
+  macroOptions: MacroSeries[];
+  setSlots: Dispatch<SetStateAction<SelectionSlot[]>>;
+  slot: SlotDescriptor;
+  slotStateById: Map<string, SelectionSlot>;
+}
 
 type AxisMode = "linear" | "log";
 type XRangePreset = "3m" | "6m" | "1y" | "2y" | "max";
@@ -112,11 +122,14 @@ const X_RANGE_OPTIONS: Array<{ value: XRangePreset; label: string }> = [
 ];
 
 function buildInitialSlots(series: MacroSeries[]): SelectionSlot[] {
-  const defaultSeriesKey = series.find((item) => item.key === "sp500")?.key ?? "";
+  const defaultSeriesKey =
+    series.find((item) => item.key === "sp500")?.key ?? "";
 
   return Array.from({ length: SLOT_COUNT }, (_, idx) => {
     const selectedSeries =
-      idx === 0 ? (series.find((item) => item.key === defaultSeriesKey) ?? null) : null;
+      idx === 0
+        ? (series.find((item) => item.key === defaultSeriesKey) ?? null)
+        : null;
 
     return {
       id: `slot-${idx + 1}`,
@@ -157,7 +170,13 @@ function parseStoredChartSplit(value: string | null): number | null {
 }
 
 function parseStoredXRangePreset(value: string | null): XRangePreset | null {
-  if (value === "3m" || value === "6m" || value === "1y" || value === "2y" || value === "max") {
+  if (
+    value === "3m" ||
+    value === "6m" ||
+    value === "1y" ||
+    value === "2y" ||
+    value === "max"
+  ) {
     return value;
   }
 
@@ -166,7 +185,7 @@ function parseStoredXRangePreset(value: string | null): XRangePreset | null {
 
 function getChartSplitFromPointer(
   container: HTMLDivElement | null,
-  clientY: number,
+  clientY: number
 ): number | null {
   const rect = container?.getBoundingClientRect();
   if (!rect || rect.height <= 0) {
@@ -196,7 +215,9 @@ function formatDateTick(value: unknown): string {
 }
 
 function getSharedDateDomain(rows: OverlayRow[][]): [number, number] | null {
-  const timestamps = rows.flatMap((entry) => entry.map((row) => row.dateTs)).filter(Number.isFinite);
+  const timestamps = rows
+    .flatMap((entry) => entry.map((row) => row.dateTs))
+    .filter(Number.isFinite);
 
   if (timestamps.length === 0) {
     return null;
@@ -207,7 +228,7 @@ function getSharedDateDomain(rows: OverlayRow[][]): [number, number] | null {
 
 function getVisibleDateDomain(
   domain: [number, number],
-  preset: XRangePreset,
+  preset: XRangePreset
 ): [number, number] {
   const [minTs, maxTs] = domain;
 
@@ -216,14 +237,14 @@ function getVisibleDateDomain(
   }
 
   const maxDate = new Date(maxTs);
-  const startDate =
-    preset === "3m"
-      ? subMonths(maxDate, 3)
-      : preset === "6m"
-        ? subMonths(maxDate, 6)
-        : preset === "1y"
-          ? subYears(maxDate, 1)
-          : subYears(maxDate, 2);
+  let startDate = subYears(maxDate, 2);
+  if (preset === "3m") {
+    startDate = subMonths(maxDate, 3);
+  } else if (preset === "6m") {
+    startDate = subMonths(maxDate, 6);
+  } else if (preset === "1y") {
+    startDate = subYears(maxDate, 1);
+  }
   const startTs = Math.max(minTs, startDate.getTime());
 
   return [startTs, maxTs];
@@ -246,12 +267,22 @@ function getPositiveMinForKey(rows: OverlayRow[], key: string): number | null {
   return minValue;
 }
 
-function filterRowsToDomain(rows: OverlayRow[], domain: [number, number]): OverlayRow[] {
-  return rows.filter((row) => row.dateTs >= domain[0] && row.dateTs <= domain[1]);
+function filterRowsToDomain(
+  rows: OverlayRow[],
+  domain: [number, number]
+): OverlayRow[] {
+  return rows.filter(
+    (row) => row.dateTs >= domain[0] && row.dateTs <= domain[1]
+  );
 }
 
-function filterMarkersToDomain(markers: ChartMarker[], domain: [number, number]): ChartMarker[] {
-  return markers.filter((marker) => marker.dateTs >= domain[0] && marker.dateTs <= domain[1]);
+function filterMarkersToDomain(
+  markers: ChartMarker[],
+  domain: [number, number]
+): ChartMarker[] {
+  return markers.filter(
+    (marker) => marker.dateTs >= domain[0] && marker.dateTs <= domain[1]
+  );
 }
 
 function canUseLogScale(series: MacroSeries[]): boolean {
@@ -260,7 +291,69 @@ function canUseLogScale(series: MacroSeries[]): boolean {
   }
 
   return series.every(
-    (item) => item.points.length > 0 && item.points.every((point) => Number.isFinite(point.value) && point.value > 0),
+    (item) =>
+      item.points.length > 0 &&
+      item.points.every(
+        (point) => Number.isFinite(point.value) && point.value > 0
+      )
+  );
+}
+
+function updateSlot(
+  setSlots: Dispatch<SetStateAction<SelectionSlot[]>>,
+  slotId: string,
+  updater: (entry: SelectionSlot) => SelectionSlot
+): void {
+  setSlots((current) =>
+    current.map((entry) => (entry.id === slotId ? updater(entry) : entry))
+  );
+}
+
+function buildAxisButtonClass(isActive: boolean, isEnabled: boolean): string {
+  return `rounded-md border px-2 py-1.5 font-medium text-[11px] ${
+    isActive
+      ? "border-slate-900 bg-slate-900 text-white"
+      : "border-slate-300 bg-white text-slate-700"
+  } ${isEnabled ? "" : "cursor-not-allowed opacity-50"}`;
+}
+
+function renderChartPlaceholder(message: string) {
+  return (
+    <div className="flex h-full items-center justify-center rounded-xl border border-slate-300 border-dashed bg-white text-slate-500 text-sm">
+      {message}
+    </div>
+  );
+}
+
+function renderSeparateYAxis(
+  item: MacroSeries,
+  idx: number,
+  title: string,
+  sharedSeriesLength: number,
+  visibleRows: OverlayRow[],
+  axisModeByKey: Map<string, AxisMode>
+) {
+  const axisMode = axisModeByKey.get(item.key) ?? "linear";
+  const axisScale = axisMode === "log" ? "log" : "linear";
+  const axisDomain =
+    axisScale === "log"
+      ? ([getPositiveMinForKey(visibleRows, item.key) ?? 1, "auto"] as const)
+      : (["auto", "auto"] as const);
+  const showTicks = sharedSeriesLength === 0 && idx === 0;
+
+  return (
+    <YAxis
+      allowDataOverflow={axisScale === "log"}
+      axisLine={false}
+      domain={axisDomain}
+      key={`y-${title}-${item.key}`}
+      scale={axisScale}
+      tick={showTicks ? { fontSize: 11, fill: "#64748b" } : false}
+      tickFormatter={(value: number) => formatChartAxisValue(value)}
+      tickLine={false}
+      width={showTicks ? 58 : 0}
+      yAxisId={item.key}
+    />
   );
 }
 
@@ -283,8 +376,14 @@ function buildHoverSnapshot({
   const items = payload
     .filter((entry) => typeof entry.value === "number")
     .map((entry) => ({
-      key: typeof entry.dataKey === "string" ? entry.dataKey : String(entry.name ?? "series"),
-      label: typeof entry.name === "string" ? entry.name : String(entry.dataKey ?? "Serie"),
+      key:
+        typeof entry.dataKey === "string"
+          ? entry.dataKey
+          : String(entry.name ?? "series"),
+      label:
+        typeof entry.name === "string"
+          ? entry.name
+          : String(entry.dataKey ?? "Serie"),
       value: entry.value as number,
       color: typeof entry.color === "string" ? entry.color : "#0f172a",
     }));
@@ -313,38 +412,204 @@ function ChartPanel({
   separateYAxisKeys,
   emptyMessage,
 }: ChartPanelProps) {
-  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(null);
+  const [hoverSnapshot, setHoverSnapshot] = useState<HoverSnapshot | null>(
+    null
+  );
   const visibleRows = filterRowsToDomain(rows, xDomain);
   const visibleMarkers = filterMarkersToDomain(markers, xDomain);
   const sharedSeries = series.filter((item) => {
     const axisMode = axisModeByKey.get(item.key) ?? "linear";
     return axisMode === "linear" && !separateYAxisKeys.has(item.key);
   });
-  const separateSeries = series.filter((item) => !sharedSeries.some((shared) => shared.key === item.key));
+  const separateSeries = series.filter(
+    (item) => !sharedSeries.some((shared) => shared.key === item.key)
+  );
+  let chartContent = renderChartPlaceholder("Chart wird initialisiert...");
+
+  if (isReady) {
+    if (visibleRows.length > 0 && series.length > 0) {
+      chartContent = (
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="min-h-0 flex-1">
+            <ResponsiveContainer height="100%" width="100%">
+              <LineChart
+                data={visibleRows}
+                margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                onMouseLeave={() => {
+                  setHoverSnapshot(null);
+                }}
+                onMouseMove={(state) => {
+                  const hoverState = state as {
+                    activeLabel?: unknown;
+                    activePayload?: Array<{
+                      dataKey?: unknown;
+                      name?: unknown;
+                      value?: unknown;
+                      color?: unknown;
+                    }>;
+                  };
+
+                  setHoverSnapshot(
+                    buildHoverSnapshot({
+                      label: hoverState.activeLabel,
+                      payload: hoverState.activePayload,
+                    })
+                  );
+                }}
+                syncId={CHART_SYNC_ID}
+                syncMethod="value"
+              >
+                <CartesianGrid stroke="#dbe3ee" strokeDasharray="3 3" />
+                <XAxis
+                  axisLine={false}
+                  dataKey="dateTs"
+                  domain={xDomain}
+                  minTickGap={20}
+                  scale="time"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tickFormatter={(value) => formatDateTick(value)}
+                  tickLine={false}
+                  type="number"
+                />
+                <YAxis
+                  axisLine={false}
+                  domain={["auto", "auto"]}
+                  hide={sharedSeries.length === 0}
+                  scale="linear"
+                  tick={{ fontSize: 11, fill: "#64748b" }}
+                  tickFormatter={(value: number) => formatChartAxisValue(value)}
+                  tickLine={false}
+                  width={58}
+                  yAxisId="shared"
+                />
+                {separateSeries.map((item, idx) =>
+                  renderSeparateYAxis(
+                    item,
+                    idx,
+                    title,
+                    sharedSeries.length,
+                    visibleRows,
+                    axisModeByKey
+                  )
+                )}
+                <Tooltip
+                  content={() => null}
+                  cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                {series.map((item) => (
+                  <Line
+                    connectNulls
+                    dataKey={item.key}
+                    dot={false}
+                    isAnimationActive={false}
+                    key={`${title}-${item.key}`}
+                    name={item.shortLabel}
+                    stroke={item.color}
+                    strokeDasharray={
+                      item.key.startsWith("rsi-scorew:") ? "6 4" : undefined
+                    }
+                    strokeWidth={2}
+                    type="monotone"
+                    yAxisId={
+                      separateYAxisKeys.has(item.key) ? item.key : "shared"
+                    }
+                  />
+                ))}
+                {visibleMarkers.map((marker) => (
+                  <ReferenceLine
+                    ifOverflow="extendDomain"
+                    key={`segment-${marker.key}`}
+                    segment={[
+                      { x: marker.startDateTs, y: marker.startValue },
+                      { x: marker.dateTs, y: marker.value },
+                    ]}
+                    stroke={marker.color}
+                    strokeDasharray="4 4"
+                    strokeWidth={1.5}
+                    yAxisId={
+                      separateYAxisKeys.has(marker.indicatorKey)
+                        ? marker.indicatorKey
+                        : "shared"
+                    }
+                  />
+                ))}
+                {visibleMarkers.map((marker) => (
+                  <ReferenceDot
+                    fill="#ffffff"
+                    ifOverflow="extendDomain"
+                    key={marker.key}
+                    r={4}
+                    stroke={marker.color}
+                    strokeWidth={2}
+                    x={marker.dateTs}
+                    y={marker.value}
+                    yAxisId={
+                      separateYAxisKeys.has(marker.indicatorKey)
+                        ? marker.indicatorKey
+                        : "shared"
+                    }
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div
+            aria-live="polite"
+            className="mt-1 flex min-h-[2.75rem] items-end justify-end"
+          >
+            {hoverSnapshot ? (
+              <div className="max-w-full rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-right shadow-sm">
+                <p className="font-semibold text-slate-500 text-xs">
+                  {hoverSnapshot.dateLabel}
+                </p>
+                {hoverSnapshot.items.map((item) => (
+                  <p className="mt-0.5 text-xs" key={item.key}>
+                    <span className="font-medium" style={{ color: item.color }}>
+                      {item.label}
+                    </span>
+                    <span className="text-slate-600">
+                      {" "}
+                      : {formatNumber(item.value, 2)}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    } else {
+      chartContent = renderChartPlaceholder(
+        series.length > 0 ? "Keine Daten im aktuellen X-Fenster." : emptyMessage
+      );
+    }
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
       <div className="shrink-0">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
               {title}
             </p>
-            <p className="mt-1 text-xs text-slate-600">{subtitle}</p>
+            <p className="mt-1 text-slate-600 text-xs">{subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5">
               {X_RANGE_OPTIONS.map((option) => (
                 <button
-                  key={`${title}-${option.value}`}
-                  type="button"
-                  onClick={() => onXRangeChange(option.value)}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  aria-pressed={option.value === xRangePreset}
+                  className={`rounded-full px-2.5 py-1 font-medium text-[11px] transition ${
                     option.value === xRangePreset
                       ? "bg-slate-900 text-white"
                       : "text-slate-600 hover:bg-slate-100"
                   }`}
-                  aria-pressed={option.value === xRangePreset}
+                  key={`${title}-${option.value}`}
+                  onClick={() => onXRangeChange(option.value)}
+                  type="button"
                 >
                   {option.label}
                 </button>
@@ -357,203 +622,238 @@ function ChartPanel({
         </div>
       </div>
 
-      <div className="mt-2 min-h-0 flex-1" role="img" aria-label={`${title}: ${subtitle}`}>
-        {!isReady ? (
-          <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
-            Chart wird initialisiert...
-          </div>
-        ) : visibleRows.length > 0 && series.length > 0 ? (
-          <div className="flex h-full min-h-0 flex-col">
-            <div className="min-h-0 flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={visibleRows}
-                  syncId={CHART_SYNC_ID}
-                  syncMethod="value"
-                  margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-                  onMouseMove={(state) => {
-                    const hoverState = state as {
-                      activeLabel?: unknown;
-                      activePayload?: Array<{
-                        dataKey?: unknown;
-                        name?: unknown;
-                        value?: unknown;
-                        color?: unknown;
-                      }>;
-                    };
-
-                    setHoverSnapshot(
-                      buildHoverSnapshot({
-                        label: hoverState.activeLabel,
-                        payload: hoverState.activePayload,
-                      }),
-                    );
-                  }}
-                  onMouseLeave={() => {
-                    setHoverSnapshot(null);
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe3ee" />
-                  <XAxis
-                    dataKey="dateTs"
-                    type="number"
-                    scale="time"
-                    domain={xDomain}
-                    minTickGap={20}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => formatDateTick(value)}
-                  />
-                  <YAxis
-                    yAxisId="shared"
-                    width={58}
-                    domain={["auto", "auto"]}
-                    scale="linear"
-                    hide={sharedSeries.length === 0}
-                    tick={{ fontSize: 11, fill: "#64748b" }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value: number) => formatChartAxisValue(value)}
-                  />
-                  {separateSeries.length > 0
-                    ? separateSeries.map((item, idx) => (
-                        (() => {
-                          const axisMode = axisModeByKey.get(item.key) ?? "linear";
-                          const axisScale = axisMode === "log" ? "log" : "linear";
-                          const axisDomain =
-                            axisScale === "log"
-                              ? ([getPositiveMinForKey(visibleRows, item.key) ?? 1, "auto"] as const)
-                              : (["auto", "auto"] as const);
-
-                          return (
-                            <YAxis
-                              key={`y-${title}-${item.key}`}
-                              yAxisId={item.key}
-                              domain={axisDomain}
-                              scale={axisScale}
-                              width={sharedSeries.length === 0 && idx === 0 ? 58 : 0}
-                              tick={
-                                sharedSeries.length === 0 && idx === 0
-                                  ? { fontSize: 11, fill: "#64748b" }
-                                  : false
-                              }
-                              tickLine={false}
-                              axisLine={false}
-                              allowDataOverflow={axisScale === "log"}
-                              tickFormatter={(value: number) => formatChartAxisValue(value)}
-                            />
-                          );
-                        })()
-                      ))
-                    : null}
-                  <Tooltip
-                    cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }}
-                    content={() => null}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "12px" }} />
-                  {series.map((item) => (
-                    <Line
-                      key={`${title}-${item.key}`}
-                      type="monotone"
-                      dataKey={item.key}
-                      yAxisId={separateYAxisKeys.has(item.key) ? item.key : "shared"}
-                      name={item.shortLabel}
-                      stroke={item.color}
-                      strokeDasharray={item.key.startsWith("rsi-scorew:") ? "6 4" : undefined}
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                      connectNulls
-                    />
-                  ))}
-                  {visibleMarkers.map((marker) => (
-                    <ReferenceLine
-                      key={`segment-${marker.key}`}
-                      yAxisId={separateYAxisKeys.has(marker.indicatorKey) ? marker.indicatorKey : "shared"}
-                      ifOverflow="extendDomain"
-                      stroke={marker.color}
-                      strokeWidth={1.5}
-                      strokeDasharray="4 4"
-                      segment={[
-                        { x: marker.startDateTs, y: marker.startValue },
-                        { x: marker.dateTs, y: marker.value },
-                      ]}
-                    />
-                  ))}
-                  {visibleMarkers.map((marker) => (
-                    <ReferenceDot
-                      key={marker.key}
-                      x={marker.dateTs}
-                      y={marker.value}
-                      yAxisId={separateYAxisKeys.has(marker.indicatorKey) ? marker.indicatorKey : "shared"}
-                      r={4}
-                      fill="#ffffff"
-                      stroke={marker.color}
-                      strokeWidth={2}
-                      ifOverflow="extendDomain"
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-1 flex min-h-[2.75rem] items-end justify-end" aria-live="polite">
-              {hoverSnapshot ? (
-                <div className="max-w-full rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-right shadow-sm">
-                  <p className="text-xs font-semibold text-slate-500">{hoverSnapshot.dateLabel}</p>
-                  {hoverSnapshot.items.map((item) => (
-                    <p key={item.key} className="mt-0.5 text-xs">
-                      <span className="font-medium" style={{ color: item.color }}>
-                        {item.label}
-                      </span>
-                      <span className="text-slate-600"> : {formatNumber(item.value, 2)}</span>
-                    </p>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-500">
-            {series.length > 0 ? "Keine Daten im aktuellen X-Fenster." : emptyMessage}
-          </div>
-        )}
+      <div
+        aria-label={`${title}: ${subtitle}`}
+        className="mt-2 min-h-0 flex-1"
+        role="img"
+      >
+        {chartContent}
       </div>
     </section>
   );
 }
 
-export function SeriesWorkbench({
-  series,
-  className,
-}: Props) {
+function SelectionSlotRow({
+  assetOptions,
+  deferredSelectableSeries,
+  macroOptions,
+  setSlots,
+  slot,
+  slotStateById,
+}: SelectionSlotRowProps) {
+  const slotState = slotStateById.get(slot.id);
+  const overlayLogActive = (slotState?.overlayAxisMode ?? "linear") === "log";
+  const indicatorLogActive =
+    (slotState?.indicatorAxisMode ?? "linear") === "log";
+  const overlaySeparateChecked =
+    (slotState?.overlaySeparateYAxis ?? false) || overlayLogActive;
+  const indicatorSeparateChecked =
+    (slotState?.indicatorSeparateYAxis ?? true) || indicatorLogActive;
+  const overlayLogAllowed = Boolean(
+    slot.selectedSeries && canUseLogScale([slot.selectedSeries])
+  );
+  const indicatorLogAllowed = Boolean(
+    slot.selectedIndicator && canUseLogScale([slot.selectedIndicator])
+  );
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
+        <label className="grid min-w-0 gap-1">
+          <select
+            className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-800 text-xs"
+            onChange={(event) => {
+              const nextSeriesKey = event.target.value;
+              const nextSeries =
+                deferredSelectableSeries.find(
+                  (item) => item.key === nextSeriesKey
+                ) ?? null;
+
+              updateSlot(setSlots, slot.id, (entry) => ({
+                ...entry,
+                seriesKey: nextSeriesKey,
+                indicatorKey: "",
+                overlayAxisMode:
+                  nextSeries && canUseLogScale([nextSeries])
+                    ? entry.overlayAxisMode
+                    : "linear",
+                indicatorAxisMode: "linear",
+              }));
+            }}
+            value={slot.selectedSeries?.key ?? ""}
+          >
+            <option value="">Keine Reihe</option>
+            <optgroup label="Assets">
+              {assetOptions.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.shortLabel}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Makro">
+              {macroOptions.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.shortLabel}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+        <label
+          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
+          title={
+            overlayLogActive
+              ? "Aktiv, weil Log-Skala fuer diese Reihe eine eigene Y-Achse erzwingt"
+              : "Eigene Y-Achse fuer diese obere Reihe"
+          }
+        >
+          <input
+            checked={overlaySeparateChecked}
+            className="h-3.5 w-3.5 accent-slate-900"
+            disabled={overlayLogActive}
+            onChange={(event) => {
+              updateSlot(setSlots, slot.id, (entry) => ({
+                ...entry,
+                overlaySeparateYAxis: event.target.checked,
+              }));
+            }}
+            type="checkbox"
+          />
+        </label>
+        <button
+          className={buildAxisButtonClass(overlayLogActive, overlayLogAllowed)}
+          disabled={!overlayLogAllowed}
+          onClick={() => {
+            updateSlot(setSlots, slot.id, (entry) => ({
+              ...entry,
+              overlayAxisMode:
+                entry.overlayAxisMode === "linear" ? "log" : "linear",
+            }));
+          }}
+          title="Logarithmische Skala fuer diese obere Reihe"
+          type="button"
+        >
+          L
+        </button>
+
+        <label className="grid min-w-0 gap-1">
+          <select
+            className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-800 text-xs disabled:bg-slate-100 disabled:text-slate-400"
+            disabled={
+              !slot.selectedSeries || slot.indicatorOptions.length === 0
+            }
+            onChange={(event) => {
+              const nextIndicatorKey = event.target.value;
+              const nextIndicator =
+                slot.indicatorOptions.find(
+                  (item) => item.key === nextIndicatorKey
+                ) ?? null;
+
+              updateSlot(setSlots, slot.id, (entry) => ({
+                ...entry,
+                indicatorKey: nextIndicatorKey,
+                indicatorAxisMode:
+                  nextIndicator && canUseLogScale([nextIndicator])
+                    ? entry.indicatorAxisMode
+                    : "linear",
+              }));
+            }}
+            value={slot.effectiveIndicatorKey}
+          >
+            <option value="">Kein Indikator</option>
+            {slot.indicatorOptions.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.shortLabel}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label
+          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
+          title={
+            indicatorLogActive
+              ? "Aktiv, weil Log-Skala fuer diesen Indikator eine eigene Y-Achse erzwingt"
+              : "Eigene Y-Achse fuer diesen Indikator"
+          }
+        >
+          <input
+            checked={indicatorSeparateChecked}
+            className="h-3.5 w-3.5 accent-slate-900"
+            disabled={indicatorLogActive}
+            onChange={(event) => {
+              updateSlot(setSlots, slot.id, (entry) => ({
+                ...entry,
+                indicatorSeparateYAxis: event.target.checked,
+              }));
+            }}
+            type="checkbox"
+          />
+        </label>
+        <button
+          className={buildAxisButtonClass(
+            indicatorLogActive,
+            indicatorLogAllowed
+          )}
+          disabled={!indicatorLogAllowed}
+          onClick={() => {
+            updateSlot(setSlots, slot.id, (entry) => ({
+              ...entry,
+              indicatorAxisMode:
+                entry.indicatorAxisMode === "linear" ? "log" : "linear",
+            }));
+          }}
+          title="Logarithmische Skala fuer diesen Indikator"
+          type="button"
+        >
+          L
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function SeriesWorkbench({ series, className }: Props) {
   const selectableSeries = series.filter((item) => item.points.length > 2);
   const deferredSelectableSeries = useDeferredValue(selectableSeries);
-  const [slots, setSlots] = useState<SelectionSlot[]>(() => buildInitialSlots(selectableSeries));
+  const [slots, setSlots] = useState<SelectionSlot[]>(() =>
+    buildInitialSlots(selectableSeries)
+  );
   const deferredSlots = useDeferredValue(slots);
   const [chartSplit, setChartSplit] = useState(DEFAULT_CHART_SPLIT);
-  const [xRangePreset, setXRangePreset] = useState<XRangePreset>(DEFAULT_X_RANGE_PRESET);
+  const [xRangePreset, setXRangePreset] = useState<XRangePreset>(
+    DEFAULT_X_RANGE_PRESET
+  );
   const [isResizing, setIsResizing] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
   const chartStackRef = useRef<HTMLDivElement | null>(null);
 
-  const assetOptions = deferredSelectableSeries.filter((item) => isAssetSeries(item));
-  const macroOptions = deferredSelectableSeries.filter((item) => !isAssetSeries(item));
-  const slotStateById = new Map(deferredSlots.map((slot) => [slot.id, slot] as const));
+  const assetOptions = deferredSelectableSeries.filter((item) =>
+    isAssetSeries(item)
+  );
+  const macroOptions = deferredSelectableSeries.filter(
+    (item) => !isAssetSeries(item)
+  );
+  const slotStateById = new Map(
+    deferredSlots.map((slot) => [slot.id, slot] as const)
+  );
 
   const slotDescriptors: SlotDescriptor[] = deferredSlots.map((slot) => {
     const selectedSeries =
-      deferredSelectableSeries.find((item) => item.key === slot.seriesKey) ?? null;
-    const indicatorOptions = selectedSeries ? buildRsiScoreIndicators(selectedSeries) : [];
-    const effectiveIndicatorKey =
-      slot.indicatorKey === ""
-        ? ""
-        : indicatorOptions.some((item) => item.key === slot.indicatorKey)
-          ? slot.indicatorKey
-          : "";
+      deferredSelectableSeries.find((item) => item.key === slot.seriesKey) ??
+      null;
+    const indicatorOptions = selectedSeries
+      ? buildRsiScoreIndicators(selectedSeries)
+      : [];
+    let effectiveIndicatorKey = "";
+    if (
+      slot.indicatorKey !== "" &&
+      indicatorOptions.some((item) => item.key === slot.indicatorKey)
+    ) {
+      effectiveIndicatorKey = slot.indicatorKey;
+    }
     const selectedIndicator =
-      indicatorOptions.find((item) => item.key === effectiveIndicatorKey) ?? null;
+      indicatorOptions.find((item) => item.key === effectiveIndicatorKey) ??
+      null;
 
     return {
       id: slot.id,
@@ -565,30 +865,40 @@ export function SeriesWorkbench({
   });
 
   const overlaySeries = dedupeSeriesByKey(
-    slotDescriptors.flatMap((slot) => (slot.selectedSeries ? [slot.selectedSeries] : [])),
+    slotDescriptors.flatMap((slot) =>
+      slot.selectedSeries ? [slot.selectedSeries] : []
+    )
   );
   const indicatorSeries = dedupeSeriesByKey(
-    slotDescriptors.flatMap((slot) => (slot.selectedIndicator ? [slot.selectedIndicator] : [])),
+    slotDescriptors.flatMap((slot) =>
+      slot.selectedIndicator ? [slot.selectedIndicator] : []
+    )
   );
   const overlayAxisModeByKey = new Map(
     slotDescriptors
       .map((slot) => {
         const slotState = slotStateById.get(slot.id);
         return slot.selectedSeries
-          ? ([slot.selectedSeries.key, slotState?.overlayAxisMode ?? "linear"] as const)
+          ? ([
+              slot.selectedSeries.key,
+              slotState?.overlayAxisMode ?? "linear",
+            ] as const)
           : null;
       })
-      .filter((entry): entry is readonly [string, AxisMode] => entry !== null),
+      .filter((entry): entry is readonly [string, AxisMode] => entry !== null)
   );
   const indicatorAxisModeByKey = new Map(
     slotDescriptors
       .map((slot) => {
         const slotState = slotStateById.get(slot.id);
         return slot.selectedIndicator
-          ? ([slot.selectedIndicator.key, slotState?.indicatorAxisMode ?? "linear"] as const)
+          ? ([
+              slot.selectedIndicator.key,
+              slotState?.indicatorAxisMode ?? "linear",
+            ] as const)
           : null;
       })
-      .filter((entry): entry is readonly [string, AxisMode] => entry !== null),
+      .filter((entry): entry is readonly [string, AxisMode] => entry !== null)
   );
   const overlaySeparateYAxisKeys = new Set(
     slotDescriptors
@@ -596,11 +906,10 @@ export function SeriesWorkbench({
         (slot) =>
           slot.selectedSeries &&
           ((slotStateById.get(slot.id)?.overlaySeparateYAxis ?? false) ||
-            (slotStateById.get(slot.id)?.overlayAxisMode ?? "linear") ===
-              "log"),
+            (slotStateById.get(slot.id)?.overlayAxisMode ?? "linear") === "log")
       )
       .map((slot) => slot.selectedSeries?.key)
-      .filter((key): key is string => !!key),
+      .filter((key): key is string => !!key)
   );
   const indicatorSeparateYAxisKeys = new Set(
     slotDescriptors
@@ -609,14 +918,16 @@ export function SeriesWorkbench({
           slot.selectedIndicator &&
           ((slotStateById.get(slot.id)?.indicatorSeparateYAxis ?? true) ||
             (slotStateById.get(slot.id)?.indicatorAxisMode ?? "linear") ===
-              "log"),
+              "log")
       )
       .map((slot) => slot.selectedIndicator?.key)
-      .filter((key): key is string => !!key),
+      .filter((key): key is string => !!key)
   );
 
   useEffect(() => {
-    const stored = parseStoredChartSplit(window.localStorage.getItem(CHART_SPLIT_STORAGE_KEY));
+    const stored = parseStoredChartSplit(
+      window.localStorage.getItem(CHART_SPLIT_STORAGE_KEY)
+    );
     if (stored === null) {
       return;
     }
@@ -629,7 +940,9 @@ export function SeriesWorkbench({
   }, []);
 
   useEffect(() => {
-    const stored = parseStoredXRangePreset(window.localStorage.getItem(CHART_X_RANGE_STORAGE_KEY));
+    const stored = parseStoredXRangePreset(
+      window.localStorage.getItem(CHART_X_RANGE_STORAGE_KEY)
+    );
     if (stored === null) {
       return;
     }
@@ -666,7 +979,10 @@ export function SeriesWorkbench({
     const previousUserSelect = document.body.style.userSelect;
 
     const handlePointerMove = (event: PointerEvent) => {
-      const nextSplit = getChartSplitFromPointer(chartStackRef.current, event.clientY);
+      const nextSplit = getChartSplitFromPointer(
+        chartStackRef.current,
+        event.clientY
+      );
       if (nextSplit !== null) {
         setChartSplit(nextSplit);
       }
@@ -688,15 +1004,22 @@ export function SeriesWorkbench({
 
   const overlayRows = buildDisplayRows(overlaySeries);
   const indicatorRows = buildDisplayRows(indicatorSeries);
-  const sharedDateDomain = getSharedDateDomain([overlayRows, indicatorRows]) ?? FALLBACK_DATE_DOMAIN;
-  const visibleDateDomain = getVisibleDateDomain(sharedDateDomain, xRangePreset);
+  const sharedDateDomain =
+    getSharedDateDomain([overlayRows, indicatorRows]) ?? FALLBACK_DATE_DOMAIN;
+  const visibleDateDomain = getVisibleDateDomain(
+    sharedDateDomain,
+    xRangePreset
+  );
   const indicatorMarkers = slotDescriptors
     .flatMap((slot) => {
-      if (!slot.selectedSeries || !slot.selectedIndicator) {
+      if (!(slot.selectedSeries && slot.selectedIndicator)) {
         return [];
       }
 
-      return buildRsiDivergenceMarkers(slot.selectedSeries, slot.selectedIndicator).map((marker) => ({
+      return buildRsiDivergenceMarkers(
+        slot.selectedSeries,
+        slot.selectedIndicator
+      ).map((marker) => ({
         key: marker.key,
         startDateTs: parseISO(marker.startDate).getTime(),
         startValue: marker.startValue,
@@ -706,16 +1029,21 @@ export function SeriesWorkbench({
         indicatorKey: marker.indicatorKey,
       }));
     })
-    .filter((marker, index, list) => list.findIndex((item) => item.key === marker.key) === index);
+    .filter(
+      (marker, index, list) =>
+        list.findIndex((item) => item.key === marker.key) === index
+    );
   const topChartShare = Math.round(chartSplit * 100);
-  const rootClassName = ["mx-auto w-full max-w-7xl min-h-0", className ?? ""].join(" ").trim();
+  const rootClassName = ["mx-auto w-full max-w-7xl min-h-0", className ?? ""]
+    .join(" ")
+    .trim();
   const extremes = findCorrelationExtremes(overlaySeries);
 
   return (
     <section className={rootClassName}>
       <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="grid shrink-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+          <p className="font-semibold text-slate-600 text-xs uppercase tracking-[0.12em]">
             Overlay Slots & RSI Score
           </p>
         </div>
@@ -724,8 +1052,10 @@ export function SeriesWorkbench({
           <article className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-slate-700">
             <p className="font-medium text-slate-600">Konfiguration</p>
             <p className="mt-1">
-              {overlaySeries.length} Reihen oben, {indicatorSeries.length} Indikatoren unten,{" "}
-              {slotDescriptors.filter((slot) => slot.selectedSeries).length} von {SLOT_COUNT} Slots aktiv.
+              {overlaySeries.length} Reihen oben, {indicatorSeries.length}{" "}
+              Indikatoren unten,{" "}
+              {slotDescriptors.filter((slot) => slot.selectedSeries).length} von{" "}
+              {SLOT_COUNT} Slots aktiv.
             </p>
           </article>
 
@@ -735,7 +1065,7 @@ export function SeriesWorkbench({
               {extremes.mostPositive
                 ? `${extremes.mostPositive.leftKey} vs ${extremes.mostPositive.rightKey} (${formatNumber(
                     extremes.mostPositive.value,
-                    3,
+                    3
                   )})`
                 : "Keine robuste Korrelation"}
             </p>
@@ -747,33 +1077,33 @@ export function SeriesWorkbench({
               {extremes.mostNegative
                 ? `${extremes.mostNegative.leftKey} vs ${extremes.mostNegative.rightKey} (${formatNumber(
                     extremes.mostNegative.value,
-                    3,
+                    3
                   )})`
                 : "Keine robuste inverse Korrelation"}
             </p>
           </article>
         </div>
 
-        <div className="mt-2 min-h-0 flex flex-1 gap-2">
+        <div className="mt-2 flex min-h-0 flex-1 gap-2">
           <aside className="w-[25rem] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2">
-            <div className="border-b border-slate-200 px-1 pb-2">
+            <div className="border-slate-200 border-b px-1 pb-2">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
                   Chart
                 </p>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="font-semibold text-[11px] text-slate-400 uppercase tracking-[0.12em]">
                   Y
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="font-semibold text-[11px] text-slate-400 uppercase tracking-[0.12em]">
                   L
                 </span>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
                   Indicator
                 </p>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="font-semibold text-[11px] text-slate-400 uppercase tracking-[0.12em]">
                   Y
                 </span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <span className="font-semibold text-[11px] text-slate-400 uppercase tracking-[0.12em]">
                   L
                 </span>
               </div>
@@ -781,266 +1111,49 @@ export function SeriesWorkbench({
 
             <div className="mt-2 flex h-[calc(100%-3.25rem)] min-h-0 flex-col gap-2 overflow-y-auto pr-1">
               {slotDescriptors.map((slot) => (
-                (() => {
-                  const slotState = slotStateById.get(slot.id);
-                  const overlayLogActive = (slotState?.overlayAxisMode ?? "linear") === "log";
-                  const indicatorLogActive = (slotState?.indicatorAxisMode ?? "linear") === "log";
-                  const overlaySeparateChecked =
-                    (slotState?.overlaySeparateYAxis ?? false) || overlayLogActive;
-                  const indicatorSeparateChecked =
-                    (slotState?.indicatorSeparateYAxis ?? true) || indicatorLogActive;
-
-                  return (
-                    <div
-                      key={slot.id}
-                      className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
-                    >
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
-                    <label className="grid gap-1 min-w-0">
-                      <select
-                        value={slot.selectedSeries?.key ?? ""}
-                        onChange={(event) => {
-                          const nextSeriesKey = event.target.value;
-                          const nextSeries =
-                            deferredSelectableSeries.find((item) => item.key === nextSeriesKey) ??
-                            null;
-
-                          setSlots((current) =>
-                            current.map((entry) =>
-                              entry.id === slot.id
-                                ? {
-                                    ...entry,
-                                    seriesKey: nextSeriesKey,
-                                    indicatorKey: "",
-                                    overlayAxisMode:
-                                      nextSeries && canUseLogScale([nextSeries])
-                                        ? entry.overlayAxisMode
-                                        : "linear",
-                                    indicatorAxisMode: "linear",
-                                  }
-                                : entry,
-                            ),
-                          );
-                        }}
-                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800"
-                      >
-                        <option value="">Keine Reihe</option>
-                        <optgroup label="Assets">
-                          {assetOptions.map((item) => (
-                            <option key={item.key} value={item.key}>
-                              {item.shortLabel}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Makro">
-                          {macroOptions.map((item) => (
-                            <option key={item.key} value={item.key}>
-                              {item.shortLabel}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                    </label>
-                    <label
-                      className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
-                      title={
-                        overlayLogActive
-                          ? "Aktiv, weil Log-Skala fuer diese Reihe eine eigene Y-Achse erzwingt"
-                          : "Eigene Y-Achse fuer diese obere Reihe"
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 accent-slate-900"
-                        checked={overlaySeparateChecked}
-                        disabled={overlayLogActive}
-                        onChange={(event) => {
-                          const nextValue = event.target.checked;
-
-                          setSlots((current) =>
-                            current.map((entry) =>
-                              entry.id === slot.id
-                                ? {
-                                    ...entry,
-                                    overlaySeparateYAxis: nextValue,
-                                  }
-                                : entry,
-                            ),
-                          );
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className={`rounded-md border px-2 py-1.5 text-[11px] font-medium ${
-                        overlayLogActive
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700"
-                      } ${
-                        slot.selectedSeries && canUseLogScale([slot.selectedSeries])
-                          ? ""
-                          : "cursor-not-allowed opacity-50"
-                      }`}
-                      disabled={!slot.selectedSeries || !canUseLogScale([slot.selectedSeries])}
-                      title="Logarithmische Skala fuer diese obere Reihe"
-                      onClick={() => {
-                        setSlots((current) =>
-                          current.map((entry) =>
-                            entry.id === slot.id
-                              ? {
-                                  ...entry,
-                                  overlayAxisMode:
-                                    entry.overlayAxisMode === "linear" ? "log" : "linear",
-                                }
-                              : entry,
-                          ),
-                        );
-                      }}
-                    >
-                      L
-                    </button>
-
-                    <label className="grid gap-1 min-w-0">
-                      <select
-                        value={slot.effectiveIndicatorKey}
-                        disabled={!slot.selectedSeries || slot.indicatorOptions.length === 0}
-                        onChange={(event) => {
-                          const nextIndicatorKey = event.target.value;
-                          const nextIndicator =
-                            slot.indicatorOptions.find((item) => item.key === nextIndicatorKey) ?? null;
-
-                          setSlots((current) =>
-                            current.map((entry) =>
-                              entry.id === slot.id
-                                ? {
-                                    ...entry,
-                                    indicatorKey: nextIndicatorKey,
-                                    indicatorAxisMode:
-                                      nextIndicator && canUseLogScale([nextIndicator])
-                                        ? entry.indicatorAxisMode
-                                        : "linear",
-                                  }
-                                : entry,
-                            ),
-                          );
-                        }}
-                        className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-800 disabled:bg-slate-100 disabled:text-slate-400"
-                      >
-                        <option value="">Kein Indikator</option>
-                        {slot.indicatorOptions.map((item) => (
-                          <option key={item.key} value={item.key}>
-                            {item.shortLabel}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label
-                      className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
-                      title={
-                        indicatorLogActive
-                          ? "Aktiv, weil Log-Skala fuer diesen Indikator eine eigene Y-Achse erzwingt"
-                          : "Eigene Y-Achse fuer diesen Indikator"
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 accent-slate-900"
-                        checked={indicatorSeparateChecked}
-                        disabled={indicatorLogActive}
-                        onChange={(event) => {
-                          const nextValue = event.target.checked;
-
-                          setSlots((current) =>
-                            current.map((entry) =>
-                              entry.id === slot.id
-                                ? {
-                                    ...entry,
-                                    indicatorSeparateYAxis: nextValue,
-                                  }
-                                : entry,
-                            ),
-                          );
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className={`rounded-md border px-2 py-1.5 text-[11px] font-medium ${
-                        indicatorLogActive
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-300 bg-white text-slate-700"
-                      } ${
-                        slot.selectedIndicator && canUseLogScale([slot.selectedIndicator])
-                          ? ""
-                          : "cursor-not-allowed opacity-50"
-                      }`}
-                      disabled={!slot.selectedIndicator || !canUseLogScale([slot.selectedIndicator])}
-                      title="Logarithmische Skala fuer diesen Indikator"
-                      onClick={() => {
-                        setSlots((current) =>
-                          current.map((entry) =>
-                            entry.id === slot.id
-                              ? {
-                                  ...entry,
-                                  indicatorAxisMode:
-                                    entry.indicatorAxisMode === "linear" ? "log" : "linear",
-                                }
-                              : entry,
-                          ),
-                        );
-                      }}
-                    >
-                      L
-                    </button>
-                      </div>
-                    </div>
-                  );
-                })()
+                <SelectionSlotRow
+                  assetOptions={assetOptions}
+                  deferredSelectableSeries={deferredSelectableSeries}
+                  key={slot.id}
+                  macroOptions={macroOptions}
+                  setSlots={setSlots}
+                  slot={slot}
+                  slotStateById={slotStateById}
+                />
               ))}
             </div>
           </aside>
 
-          <div className="min-w-0 min-h-0 flex-1">
+          <div className="min-h-0 min-w-0 flex-1">
             <div
-              ref={chartStackRef}
               className="grid h-full min-h-0"
+              ref={chartStackRef}
               style={{
                 gridTemplateRows: `minmax(220px, ${chartSplit.toFixed(3)}fr) auto minmax(180px, ${(1 - chartSplit).toFixed(3)}fr)`,
               }}
             >
               <div className="min-h-0">
                 <ChartPanel
-                  title="Oberer Chart"
-                  subtitle="Hier werden die linken Dropdown-Auswahlen geplottet."
-                  series={overlaySeries}
-                  rows={overlayRows}
+                  axisModeByKey={overlayAxisModeByKey}
+                  emptyMessage="Mindestens eine Reihe in einem linken Dropdown waehlen."
+                  isReady={chartsReady}
                   markers={[]}
+                  onXRangeChange={setXRangePreset}
+                  rows={overlayRows}
+                  separateYAxisKeys={overlaySeparateYAxisKeys}
+                  series={overlaySeries}
+                  subtitle="Hier werden die linken Dropdown-Auswahlen geplottet."
+                  title="Oberer Chart"
                   xDomain={visibleDateDomain}
                   xRangePreset={xRangePreset}
-                  onXRangeChange={setXRangePreset}
-                  isReady={chartsReady}
-                  axisModeByKey={overlayAxisModeByKey}
-                  separateYAxisKeys={overlaySeparateYAxisKeys}
-                  emptyMessage="Mindestens eine Reihe in einem linken Dropdown waehlen."
                 />
               </div>
 
-              <div
-                role="separator"
+              <button
                 aria-label="Hohe zwischen oberem und unterem Chart anpassen"
-                aria-orientation="horizontal"
-                aria-valuemin={Math.round(MIN_CHART_SPLIT * 100)}
-                aria-valuemax={Math.round(MAX_CHART_SPLIT * 100)}
-                aria-valuenow={topChartShare}
-                tabIndex={0}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  const nextSplit = getChartSplitFromPointer(chartStackRef.current, event.clientY);
-                  if (nextSplit !== null) {
-                    setChartSplit(nextSplit);
-                  }
-                  setIsResizing(true);
-                }}
+                className={`group my-2 flex shrink-0 touch-none items-center outline-none ${
+                  isResizing ? "cursor-row-resize" : "cursor-ns-resize"
+                }`}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowUp") {
                     event.preventDefault();
@@ -1051,31 +1164,40 @@ export function SeriesWorkbench({
                     setChartSplit((current) => clampChartSplit(current + 0.03));
                   }
                 }}
-                className={`group my-2 flex shrink-0 touch-none items-center outline-none ${
-                  isResizing ? "cursor-row-resize" : "cursor-ns-resize"
-                }`}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  const nextSplit = getChartSplitFromPointer(
+                    chartStackRef.current,
+                    event.clientY
+                  );
+                  if (nextSplit !== null) {
+                    setChartSplit(nextSplit);
+                  }
+                  setIsResizing(true);
+                }}
+                type="button"
               >
                 <div className="h-px flex-1 bg-slate-200" />
-                <div className="mx-3 rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm transition group-focus-visible:border-slate-900 group-focus-visible:text-slate-900">
+                <div className="mx-3 rounded-full border border-slate-300 bg-white px-3 py-1 font-medium text-[11px] text-slate-600 shadow-sm transition group-focus-visible:border-slate-900 group-focus-visible:text-slate-900">
                   Split {topChartShare}% / {100 - topChartShare}%
                 </div>
                 <div className="h-px flex-1 bg-slate-200" />
-              </div>
+              </button>
 
               <div className="min-h-0 min-w-0">
                 <ChartPanel
-                  title="Unterer Chart"
-                  subtitle="Hier werden nur die rechten Indikator-Dropdowns geplottet."
-                  series={indicatorSeries}
-                  rows={indicatorRows}
+                  axisModeByKey={indicatorAxisModeByKey}
+                  emptyMessage="Mindestens einen Indikator in einem rechten Dropdown waehlen."
+                  isReady={chartsReady}
                   markers={indicatorMarkers}
+                  onXRangeChange={setXRangePreset}
+                  rows={indicatorRows}
+                  separateYAxisKeys={indicatorSeparateYAxisKeys}
+                  series={indicatorSeries}
+                  subtitle="Hier werden nur die rechten Indikator-Dropdowns geplottet."
+                  title="Unterer Chart"
                   xDomain={visibleDateDomain}
                   xRangePreset={xRangePreset}
-                  onXRangeChange={setXRangePreset}
-                  isReady={chartsReady}
-                  axisModeByKey={indicatorAxisModeByKey}
-                  separateYAxisKeys={indicatorSeparateYAxisKeys}
-                  emptyMessage="Mindestens einen Indikator in einem rechten Dropdown waehlen."
                 />
               </div>
             </div>

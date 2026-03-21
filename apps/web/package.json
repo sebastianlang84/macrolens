@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "ultracite check",
+    "fix": "ultracite fix"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
@@ -19,6 +21,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -27,6 +30,7 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "ultracite": "^7.3.2",
     "vitest": "^4.0.18"
   }
 }

@@ -7,4 +7,3 @@ export async function GET() {
   const data = await getDashboardData();
   return NextResponse.json(data);
 }
-
