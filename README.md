@@ -253,6 +253,17 @@ sequenceDiagram
 - Grundlagen & Begriffe: `docs/learning-guide.md`
 - Projekt-Navigation: `INDEX.md`
 - Projektstatus / offene Punkte: `MEMORY.md`
+- Aktive Arbeit: `TODO.md`
+- Repo-weite Doku-Grenzen: `docs/policies/policy_docs_contract.md`
+
+## Dokumentationsgrenzen (kurz)
+
+- `README.md`: Setup, Betrieb, Nutzung, Troubleshooting.
+- `MEMORY.md`: stabiler aktueller Zustand, offene Entscheidungen, Risiken.
+- `TODO.md`: nur aktive offene Arbeit.
+- `CHANGELOG.md`: kuratierte nutzer-/operatorrelevante Aenderungen.
+- `agents/memory/daily/*`: chronologische Arbeits- und Incident-Historie.
+- Details stehen in `docs/policies/policy_docs_contract.md`.
 
 ## Nächste sinnvolle Ausbaustufen
 
