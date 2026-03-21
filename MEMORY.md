@@ -6,7 +6,7 @@
 - Die P0-Basis ist abgesichert: `zod`-Validierung in Providern, `vitest`-Tests für Stats/Ableitungen/Dashboard-Pipeline sowie App-Router-`error.tsx` und `loading.tsx`.
 - Node-Version ist über `apps/web/.nvmrc` gepinnt; Minimal-CI für `lint`/`test`/`build` ist vorhanden.
 - `apps/web` nutzt zusätzlich `Ultracite`/`Biome` für `npm run check` und `npm run fix`; `npm run lint` bleibt parallel aktiv.
-- Stand 2026-03-21: `npm run check`, `npm run lint` und `npm run build` laufen in `apps/web` gruen. Bekannter Build-Hinweis bleibt die Next.js-Workspace-Root-Erkennung wegen `package-lock.json` im Root und in `apps/web`.
+- Stand 2026-03-21: `npm test`, `npm run lint` und `npm run build` laufen in `apps/web` gruen. Bekannter Build-Hinweis bleibt die Next.js-Workspace-Root-Erkennung wegen `package-lock.json` im Root und in `apps/web`.
 - Docker-Basis ist mit `apps/web/Dockerfile` und `docker-compose.yml` für stabilen Linux-Betrieb vorhanden; die App wird lokal bewusst auf `127.0.0.1:3001` veröffentlicht.
 - `docker-compose.yml` setzt explizite DNS-Server (`1.1.1.1`, `8.8.8.8`), weil der Docker-Resolver zuvor externe Datenquellen zeitweise nicht sauber auflösen konnte.
 - Die Workbench nutzt sechs feste Auswahl-Zeilen, synchronisierte obere/untere Charts, gemeinsamen X-Bereich (`3M`, `6M`, `1Y`, `2Y`, `Max`) und pro Reihe steuerbare Y-/Log-Achsen.
@@ -21,7 +21,7 @@
 - README, TODO, CHANGELOG und die neue Doku-Policy wurden am 2026-03-21 auf strengere Dokumentgrenzen umgestellt.
 - `AGENTS.md` wurde am 2026-03-21 auf eine staerker normative Struktur umgestellt, auf ihren Policy-Zweck verengt und danach audit-orientiert nachgeschaerft: Normsprache, Verweis auf `docs/git-workflow.md`, kompakte Deny-List und ein weiterer Minimalismus-Pass; konkrete Web-/Ops-First-Checks liegen in `docs/runbooks/web-first-checks.md`, Dokumentgrenzen in `docs/policies/policy_docs_contract.md`.
 - `AGENTS.md` verweist seit 2026-03-21 auf Root-Dokumente nur noch ueber eine `Key Files`-Sektion mit Rollenbeschreibung ohne eigenen Lesebefehl; taskbezogene Dateipruefung wird ueber Diagnose und Verifikation gesteuert.
-- Zwei Deepening-Kandidaten bleiben als aktive Architekturthemen in `TODO.md` festgehalten; Dashboard-Pipeline und Makro-Signal-Regelwerk wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
+- Ein verbleibender Workbench-Refactor bleibt als aktives Architekturthema in `TODO.md` festgehalten; Dashboard-Pipeline, Makro-Signal-Regelwerk und die Workbench-Engine-Orchestrierung wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
 
 ## Long-Term Memory
 - FRED benötigt einen lokalen API-Key in `apps/web/.env.local`.
@@ -43,7 +43,7 @@
 - Yahoo ist keine offiziell stabil versionierte Datenquelle und kann sich ändern.
 - Unterschiedliche Frequenzen (daily vs monthly) erschweren direkte Vergleiche.
 - Einfache Heuristiken können in Sonderregimen irreführend sein.
-- Die Workbench-Domänenlogik ist aktuell stark konzentriert und bleibt bis zu einem Refactor ein Wartungsrisiko.
+- Die verbleibende Session-/Projection-/Rendering-Kopplung in der Workbench bleibt trotz Engine-Schnitt ein Wartungsrisiko.
 
 ## Next Steps
 - `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
