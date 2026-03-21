@@ -82,6 +82,7 @@ Purpose: Chronologische Arbeits-, Incident- und Untersuchungsnotizen.
 ## 4) Maintenance Rules
 
 - Keine Secrets in Memory-, Todo-, Daily- oder Policy-Dateien.
+- Double-Injections ueber Datei-Grenzen vermeiden: Ein Steuerungs- oder Kontextinhalt soll genau ein kanonisches Zuhause haben; andere Dateien sollen ihn hoechstens knapp referenzieren, nicht erneut ausformulieren.
 - `MEMORY.md` wird in place umgeschrieben statt nur angehaengt.
 - `TODO.md` enthaelt nur offene Punkte; erledigte Eintraege werden entfernt.
 - `INDEX.md` bleibt link-orientiert.

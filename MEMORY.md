@@ -18,8 +18,7 @@
 - Divergenzmarker werden auf dem Score-Indikator selbst gerendert; die Referenzfenster für BTCUSD wurden am 2026-03-11 gegen TradingView validiert.
 - Die Dashboard-Aggregation läuft nun über `apps/web/src/lib/dashboard-pipeline.ts`; `apps/web/src/lib/dashboard-data.ts` ist nur noch der schmale Einstieg mit `FRED_API_KEY`-Weitergabe, während die Pipeline selbst strukturierte Provider-/Slow-Fetch-Diagnostik über einen optionalen Callback emittieren kann.
 - Makro-Signal-Regeln liegen nun in `apps/web/src/lib/macro-signal-rules.ts` als explizite Rule-Registry; Schwellenwerte, Inputs und Signaltexte laufen dort deklarativ ueber gemeinsame Rule-Definitionen statt ueber einzelne Regel-Funktionen, waehrend `apps/web/src/lib/macro-derivations.ts` darauf aufbauend nur noch Signalableitung und Warnings kapselt.
-- README, TODO, CHANGELOG und die neue Doku-Policy wurden am 2026-03-21 auf strengere Dokumentgrenzen umgestellt.
-- Ein verbleibender Workbench-Refactor bleibt als aktives Architekturthema in `TODO.md` festgehalten; Dashboard-Pipeline, Makro-Signal-Regelwerk und die Workbench-Engine-Orchestrierung wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
+- Dashboard-Pipeline, Makro-Signal-Regelwerk und die Workbench-Engine-Orchestrierung wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
 
 ## Long-Term Memory
 - FRED benötigt einen lokalen API-Key in `apps/web/.env.local`.
@@ -45,5 +44,5 @@
 
 ## Next Steps
 - `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
-- Verbleibenden Workbench-Refactor fuer Session-/Projection- und Rendering-Grenzen aus `TODO.md` vertiefen.
+- Verbleibenden Workbench-Refactor fuer Session-/Projection- und Rendering-Grenzen vertiefen.
 - Optional: Caching/DB einführen und Makro-Regeln schrittweise verfeinern.
