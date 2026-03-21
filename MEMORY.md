@@ -21,7 +21,6 @@
 - README, TODO, CHANGELOG und die neue Doku-Policy wurden am 2026-03-21 auf strengere Dokumentgrenzen umgestellt.
 - `AGENTS.md` wurde am 2026-03-21 auf eine staerker normative Struktur umgestellt, auf ihren Policy-Zweck verengt und danach audit-orientiert nachgeschaerft: Normsprache, Verweis auf `docs/git-workflow.md`, kompakte Deny-List und ein weiterer Minimalismus-Pass; konkrete Web-/Ops-First-Checks liegen in `docs/runbooks/web-first-checks.md`, Dokumentgrenzen in `docs/policies/policy_docs_contract.md`.
 - `AGENTS.md` verweist seit 2026-03-21 auf Root-Dokumente nur noch ueber eine `Key Files`-Sektion mit Rollenbeschreibung ohne eigenen Lesebefehl; taskbezogene Dateipruefung wird ueber Diagnose und Verifikation gesteuert.
-- `AGENTS.md` erinnert seit 2026-03-21 bei Skill-Nutzung daran, deterministischere Helfer wie `scripts/`, Templates oder andere ausfuehrbare Assets gegen reine LLM-Anweisungen abzuwiegen, ohne sie pauschal ueber `.md`- oder andere textbasierte Skill-Anleitungen zu stellen.
 - Zwei Deepening-Kandidaten bleiben als aktive Architekturthemen in `TODO.md` festgehalten; Dashboard-Pipeline und Makro-Signal-Regelwerk wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
 
 ## Long-Term Memory
