@@ -23,6 +23,7 @@
 - Ziel ist Lernen und Verständnis; Architektur und Begriffe sind Teil des Produkts, nicht nur die UI.
 - Nutzerpräferenz: Prinzipienverständnis vor Code; Erklärungen ohne Coding-Beispiele bevorzugt.
 - Sicherheitsregel: Bei Freischaltungen/Allowlists/Skills/Plugins nie von einzelnen Beispielen auf einen Voll-Enable schließen; es gilt nur der explizit genannte Scope.
+- Nutzerpräferenz: In diesem Repo ist der sinnvolle Einsatz von Subagents ausdrücklich gewünscht, wenn er klar abgegrenzte Teilaufgaben oder Parallelisierung verbessert.
 - Repo-lokale temporaere Arbeitsdateien unter `tmp/` werden über die Root-`.gitignore` ignoriert.
 - `openclaw/owui`-Hosts gehören zur separaten `ai_stack`-Topologie und sind kein stabiler MacroLens-Endpunkt.
 

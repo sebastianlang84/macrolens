@@ -14,6 +14,7 @@
 - You MUST NOT put secrets in the repo, chat, logs, or docs; use local `.env.local`.
 - You MUST NOT make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
 - You MUST NOT overwrite or revert unrelated user changes to simplify a task.
+- Use subagents when they materially improve parallelism or separation of concerns for a clearly scoped task.
 - Follow `docs/policies/policy_docs_contract.md` for document boundaries and update targets.
 - Follow `docs/git-workflow.md` for git workflow rules.
 

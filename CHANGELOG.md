@@ -18,3 +18,4 @@ The format is based on Keep a Changelog.
 - `AGENTS.md` weiter auf ihren eigentlichen Zweck verengt: keine eigene Dokument-Routing-Erklaerung mehr, sondern nur noch Verweis auf die kanonische Docs-Policy.
 - `AGENTS.md` weiter geschaerft: freistehende Zielzeile entfernt, Normsprache (`MUST`/`MUST NOT`) eingefuehrt, Git-Regeln auf `docs/git-workflow.md` verwiesen und die Sicherheitsverbote in eine kompakte Deny-List zusammengezogen.
 - `AGENTS.md` nochmals minimalisiert: schwach zusaetzliche Stil-/Guardrail-Sektionen entfernt, verbleibende Ops- und Scope-Regeln noch enger an Gates und Deny-List angebunden.
+- `AGENTS.md` ergaenzt, dass der sinnvolle Einsatz von Subagents in diesem Projekt ausdruecklich gewuenscht ist.
