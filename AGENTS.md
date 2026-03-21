@@ -18,6 +18,11 @@
 - Follow `docs/policies/policy_docs_contract.md` for document boundaries and update targets.
 - Follow `docs/git-workflow.md` for git workflow rules.
 - You MUST end each completed task with a git commit unless the user explicitly says not to commit.
+- You MUST NOT run destructive git, file, database, or migration actions unless the user explicitly requested that exact action.
+- You MUST NOT widen security boundaries such as ports, proxy/public exposure, auth weakening, routing, allowlists, plugins, skills, or tokens unless the user explicitly requested that exact scope.
+- You MUST NOT touch `openclaw/owui` routing (`ai_stack`) unless the user explicitly requested that exact scope.
+- If work already exceeded the requested security-relevant scope, restore the exact requested state before continuing.
+- For incidents, use measurement-first workflow and the concrete first checks in `docs/runbooks/web-first-checks.md`.
 
 ## Gates
 
@@ -43,12 +48,3 @@
 - Verification is completed (`npm run lint`, `npm run build` when needed, plus runtime checks for ops topics).
 - Required repo-document updates are completed according to `docs/policies/policy_docs_contract.md`.
 - The task ends with a git commit unless the user explicitly says not to commit.
-
-## Deny List
-- You MUST NOT run destructive git, file, database, or migration actions unless the user explicitly requested that exact action.
-- You MUST NOT widen security boundaries such as ports, proxy/public exposure, auth weakening, routing, allowlists, plugins, skills, or tokens unless the user explicitly requested that exact scope.
-- You MUST NOT touch `openclaw/owui` routing (`ai_stack`) unless the user explicitly requested that exact scope.
-- If work already exceeded the requested security-relevant scope, restore the exact requested state before continuing.
-
-## Ops Topics
-- For incidents, use measurement-first workflow and the concrete first checks in `docs/runbooks/web-first-checks.md`.
