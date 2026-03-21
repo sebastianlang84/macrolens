@@ -19,6 +19,7 @@
 - Makro-Signal-Regeln liegen nun in `apps/web/src/lib/macro-signal-rules.ts` als explizite Rule-Registry; `apps/web/src/lib/macro-derivations.ts` kapselt darauf aufbauend nur noch Signalableitung und Warnings.
 - README, TODO, CHANGELOG und die neue Doku-Policy wurden am 2026-03-21 auf strengere Dokumentgrenzen umgestellt.
 - `AGENTS.md` wurde am 2026-03-21 auf eine staerker normative Struktur umgestellt, auf ihren Policy-Zweck verengt und danach audit-orientiert nachgeschaerft: Normsprache, Verweis auf `docs/git-workflow.md`, kompakte Deny-List und ein weiterer Minimalismus-Pass; konkrete Web-/Ops-First-Checks liegen in `docs/runbooks/web-first-checks.md`, Dokumentgrenzen in `docs/policies/policy_docs_contract.md`.
+- `AGENTS.md` verweist seit 2026-03-21 auf Root-Dokumente ueber eine `Key Files`-Sektion mit Rollenbeschreibung; Gate D koppelt Dokument-Checks an Verifikation statt an eine pauschale Root-Doc-Vorab-Lesepflicht.
 - Vier Deepening-Kandidaten bleiben als aktive Architekturthemen in `TODO.md` festgehalten; Dashboard-Pipeline und Makro-Signal-Regelwerk haben dafuer bereits erste Boundary-/Rule-Registry-Schnitte erhalten.
 
 ## Long-Term Memory

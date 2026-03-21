@@ -17,6 +17,7 @@ The format is based on Keep a Changelog.
 - Workbench-A11y fuer Slot-Steuerung und Hover-Readout verbessert: Y-Checkboxen und `L`-Buttons haben eindeutige zugaengliche Namen, und der visuelle Chart-Readout spammt Screenreader nicht mehr ueber `aria-live`.
 
 ### Changed
+- `AGENTS.md` verweist auf Root-Dokumente jetzt ueber eine eigene `Key Files`-Sektion und koppelt Dokument-Checks in Gate D an die Verifikation statt an eine pauschale Vorab-Lesepflicht fuer alle Root-Dateien.
 - Dashboard-Datenfluss hinter `apps/web/src/lib/dashboard-pipeline.ts` als explizite Boundary gekapselt; `dashboard-data.ts` ist nur noch der schmale Einstieg.
 - Makro-Signal-Ableitung in ein eigenes Regelmodul `apps/web/src/lib/macro-signal-rules.ts` geschnitten, sodass die Signalreihenfolge ueber eine explizite Registry statt ueber verteilte Aufrufe laeuft.
 - Root-Dokumente (`AGENTS.md`, `README.md`, `INDEX.md`, `MEMORY.md`, `TODO.md`) auf klarere Abgrenzung zwischen Setup, stabilem Zustand, aktiver Arbeit, Historie und Policy ausgerichtet.

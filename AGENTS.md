@@ -9,7 +9,7 @@
 - Learn from mistakes: name them, correct them, and document the durable rule.
 
 ## Rules
-- You MUST read and understand `README.md`, `INDEX.md`, `MEMORY.md`, and affected files before changing the repo.
+- You MUST read the affected files before changing the repo.
 - You MUST verify every completed change (`npm run lint`, and `npm run build` when needed).
 - You MUST NOT put secrets in the repo, chat, logs, or docs; use local `.env.local`.
 - You MUST NOT make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
@@ -24,6 +24,15 @@
 - You MUST NOT touch `openclaw/owui` routing (`ai_stack`) unless the user explicitly requested that exact scope.
 - If work already exceeded the requested security-relevant scope, restore the exact requested state before continuing.
 - For incidents, use measurement-first workflow and the concrete first checks in `docs/runbooks/web-first-checks.md`.
+
+## Key Files
+- `INDEX.md` for navigation.
+- `README.md` for setup and operation.
+- `MEMORY.md` for stable project state.
+- `TODO.md` for active open work.
+- `CHANGELOG.md` for user-visible repo changes.
+- `docs/policies/policy_docs_contract.md` for document boundaries and update rules.
+- `docs/git-workflow.md` for git workflow rules.
 
 ## Gates
 
@@ -42,4 +51,6 @@
 
 ### Gate D: Verification
 - Verify after every change with the relevant checks.
-- After verification, update the required repo documents according to `docs/policies/policy_docs_contract.md`.
+- After verification, check/update `MEMORY.md` or state that no stable-state change was needed.
+- After verification, check/update `README.md`, `TODO.md`, and `CHANGELOG.md` when the change affects them.
+- After verification, follow `docs/policies/policy_docs_contract.md` for any other document routing.
