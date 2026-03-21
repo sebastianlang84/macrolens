@@ -9,7 +9,6 @@
 - Learn from mistakes: name them, correct them, and document the durable rule.
 
 ## Rules
-- You MUST read the affected files before changing the repo.
 - You MUST verify every completed change (`npm run lint`, and `npm run build` when needed).
 - You MUST NOT put secrets in the repo, chat, logs, or docs; use local `.env.local`.
 - You MUST NOT make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
@@ -41,7 +40,7 @@
 - Name open assumptions or missing facts that could change the approach.
 
 ### Gate B: Read-Only Diagnose
-- Read/check first before writing.
+- Inspect the task-relevant files and facts before writing.
 - For ops/runtime topics: measure the symptom concretely before changing anything.
 - When facts are unclear, stop and ask instead of guessing.
 
