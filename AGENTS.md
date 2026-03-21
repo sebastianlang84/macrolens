@@ -18,6 +18,7 @@
 - Follow `docs/policies/policy_docs_contract.md` for document boundaries and update targets.
 - Follow `docs/git-workflow.md` for git workflow rules.
 - You MUST end each completed task with a git commit unless the user explicitly says not to commit.
+- You MUST complete the functional fix or requested change before closing the task.
 - You MUST NOT run destructive git, file, database, or migration actions unless the user explicitly requested that exact action.
 - You MUST NOT widen security boundaries such as ports, proxy/public exposure, auth weakening, routing, allowlists, plugins, skills, or tokens unless the user explicitly requested that exact scope.
 - You MUST NOT touch `openclaw/owui` routing (`ai_stack`) unless the user explicitly requested that exact scope.
@@ -42,9 +43,3 @@
 ### Gate D: Verification
 - Verify after every change with the relevant checks.
 - After verification, update the required repo documents according to `docs/policies/policy_docs_contract.md`.
-
-## Definition of Done
-- The functional fix or change is implemented.
-- Verification is completed (`npm run lint`, `npm run build` when needed, plus runtime checks for ops topics).
-- Required repo-document updates are completed according to `docs/policies/policy_docs_contract.md`.
-- The task ends with a git commit unless the user explicitly says not to commit.
