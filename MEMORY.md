@@ -10,6 +10,7 @@
 - Docker-Basis ist mit `apps/web/Dockerfile` und `docker-compose.yml` für stabilen Linux-Betrieb vorhanden; die App wird lokal bewusst auf `127.0.0.1:3001` veröffentlicht.
 - `docker-compose.yml` setzt explizite DNS-Server (`1.1.1.1`, `8.8.8.8`), weil der Docker-Resolver zuvor externe Datenquellen zeitweise nicht sauber auflösen konnte.
 - Die Workbench nutzt sechs feste Auswahl-Zeilen, synchronisierte obere/untere Charts, gemeinsamen X-Bereich (`3M`, `6M`, `1Y`, `2Y`, `Max`) und pro Reihe steuerbare Y-/Log-Achsen.
+- Stand 2026-03-22: Die Workbench-Session persistiert zusaetzlich einen globalen `Daily`/`Weekly`-Chartmodus; obere und untere Charts projizieren dieselben Slot-Auswahlen nun wahlweise taeglich oder wochenweise, ohne die Slot-/Indicator-Engine oder Dropdown-Semantik zu aendern.
 - Die Workbench-Shell nutzt kein global erzwungenes One-Screen-Layout mehr; kleine Viewports stapeln Slot-Konfiguration und Charts vertikal, waehrend der manuelle Chart-Splitter nur noch auf `lg` aktiv ist.
 - Der visuelle Hover-Readout der Charts bleibt erhalten, erzeugt aber keine `aria-live`-Updates mehr bei jeder Mausbewegung; die Y-/`L`-Slot-Steuerung hat nun explizite zugaengliche Namen.
 - Stand 2026-03-21: Die fachliche Slot-/Indicator-Orchestrierung der Workbench liegt nicht mehr direkt in `apps/web/src/components/series-workbench.tsx`, sondern in `apps/web/src/lib/series-workbench-engine.ts`; die Client-Komponente konsumiert nun ein zusammenhaengendes Engine-Paket fuer `slotDescriptors`, Overlay-/Indicator-Reihen, Companion-Zuordnung und Divergenzmarker.
@@ -42,8 +43,9 @@
 - Unterschiedliche Frequenzen (daily vs monthly) erschweren direkte Vergleiche.
 - Einfache Heuristiken können in Sonderregimen irreführend sein.
 - Die Workbench ist entlang Engine-, Session-/Persistenz- und Chart-Projection-Grenzen geschnitten; verbleibende Komplexitaet sitzt primaer in den Render-Komponenten selbst.
+- Weekly-Chartmodus aggregiert candle-basierte Overlay-Reihen sowie RSI-Score-/RSI-Companion-Indikatoren auf Wochenstart; nicht-candle-basierte Makroreihen bleiben im Weekly-Modus auf ihren Originaldaten, um Datumsverschiebungen bei bereits groberen Frequenzen zu vermeiden.
 
 ## Next Steps
 - `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
-- Naechster Workbench-Schritt ist die `Daily`/`Weekly`-Umschaltung fuer Charts auf dem nun getrennten Fundament.
+- Naechster groesserer Workbench-Schritt liegt nun ausserhalb von P0; offen ist als naechstes Bundle B mit dem Strategy-Backtester.
 - Optional: Caching/DB einführen und Makro-Regeln schrittweise verfeinern.

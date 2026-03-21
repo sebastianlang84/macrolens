@@ -34,6 +34,7 @@ import {
 import {
   SERIES_WORKBENCH_SLOT_COUNT,
   useSeriesWorkbenchSession,
+  type ChartInterval,
   type XRangePreset,
 } from "@/lib/use-series-workbench-session";
 import { isAssetSeries } from "@/lib/series-analysis";
@@ -46,9 +47,11 @@ interface Props {
 
 interface ChartPanelProps {
   axisModeByKey: Map<string, AxisMode>;
+  chartInterval: ChartInterval;
   emptyMessage: string;
   isReady: boolean;
   markers?: ChartMarker[];
+  onChartIntervalChange: (interval: ChartInterval) => void;
   onXRangeChange: (preset: XRangePreset) => void;
   rows: OverlayRow[];
   separateYAxisKeys: Set<string>;
@@ -86,6 +89,13 @@ const X_RANGE_OPTIONS: Array<{ value: XRangePreset; label: string }> = [
   { value: "1y", label: "1Y" },
   { value: "2y", label: "2Y" },
   { value: "max", label: "Max" },
+];
+const CHART_INTERVAL_OPTIONS: Array<{
+  value: ChartInterval;
+  label: string;
+}> = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
 ];
 
 function canUseLogScale(series: MacroSeries[]): boolean {
@@ -204,11 +214,13 @@ function buildHoverSnapshot({
 function ChartPanel({
   title,
   subtitle,
+  chartInterval,
   series,
   rows,
   markers = [],
   xDomain,
   xRangePreset,
+  onChartIntervalChange,
   onXRangeChange,
   isReady,
   axisModeByKey,
@@ -398,6 +410,23 @@ function ChartPanel({
             <p className="mt-1 text-slate-600 text-xs">{subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5">
+              {CHART_INTERVAL_OPTIONS.map((option) => (
+                <button
+                  aria-pressed={option.value === chartInterval}
+                  className={`rounded-full px-2.5 py-1 font-medium text-[11px] transition ${
+                    option.value === chartInterval
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  key={`${title}-interval-${option.value}`}
+                  onClick={() => onChartIntervalChange(option.value)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5">
               {X_RANGE_OPTIONS.map((option) => (
                 <button
@@ -627,6 +656,7 @@ export function SeriesWorkbench({ series, className }: Props) {
   const selectableSeries = series.filter((item) => item.points.length > 2);
   const {
     beginResize,
+    chartInterval,
     chartSplit,
     chartStackRef,
     chartsReady,
@@ -635,6 +665,7 @@ export function SeriesWorkbench({ series, className }: Props) {
     isResizing,
     nudgeChartSplit,
     setSlots,
+    setChartInterval,
     setXRangePreset,
     xRangePreset,
   } = useSeriesWorkbenchSession(selectableSeries);
@@ -666,6 +697,7 @@ export function SeriesWorkbench({ series, className }: Props) {
     overlaySeparateYAxisKeys,
     visibleDateDomain,
   } = buildSeriesWorkbenchProjection({
+    chartInterval,
     companionSeriesKeysByIndicatorKey,
     indicatorMarkers,
     indicatorSeries,
@@ -775,9 +807,11 @@ export function SeriesWorkbench({ series, className }: Props) {
               <div className="min-h-0">
                 <ChartPanel
                   axisModeByKey={overlayAxisModeByKey}
+                  chartInterval={chartInterval}
                   emptyMessage="Mindestens eine Reihe in einem linken Dropdown waehlen."
                   isReady={chartsReady}
                   markers={[]}
+                  onChartIntervalChange={setChartInterval}
                   onXRangeChange={setXRangePreset}
                   rows={overlayRows}
                   separateYAxisKeys={overlaySeparateYAxisKeys}
@@ -820,9 +854,11 @@ export function SeriesWorkbench({ series, className }: Props) {
               <div className="min-h-0 min-w-0">
                 <ChartPanel
                   axisModeByKey={indicatorAxisModeByKey}
+                  chartInterval={chartInterval}
                   emptyMessage="Mindestens einen Indikator in einem rechten Dropdown waehlen."
                   isReady={chartsReady}
                   markers={chartMarkers}
+                  onChartIntervalChange={setChartInterval}
                   onXRangeChange={setXRangePreset}
                   rows={indicatorRows}
                   separateYAxisKeys={indicatorSeparateYAxisKeys}

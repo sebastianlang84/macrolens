@@ -1,8 +1,15 @@
-import { format, parseISO, subMonths, subYears } from "date-fns";
-import { buildOverlayData, findCorrelationExtremes } from "@/lib/series-analysis";
+import { format, parseISO, startOfWeek, subMonths, subYears } from "date-fns";
+import {
+  buildOverlayData,
+  buildWeeklySeries,
+  findCorrelationExtremes,
+} from "@/lib/series-analysis";
 import { formatNumber } from "@/lib/formatters";
 import type { WorkbenchAxisMode, WorkbenchSlotDescriptor } from "@/lib/series-workbench-engine";
-import type { XRangePreset } from "@/lib/use-series-workbench-session";
+import type {
+  ChartInterval,
+  XRangePreset,
+} from "@/lib/use-series-workbench-session";
 import type { MacroSeries } from "@/types/macro";
 
 export type OverlayRow = {
@@ -120,6 +127,7 @@ export function filterMarkersToDomain(
 }
 
 export interface SeriesWorkbenchProjectionInput {
+  chartInterval: ChartInterval;
   companionSeriesKeysByIndicatorKey: Map<string, string[]>;
   indicatorMarkers: Array<{
     color: string;
@@ -157,7 +165,86 @@ export interface SeriesWorkbenchProjection {
   visibleDateDomain: [number, number];
 }
 
+function shouldBucketSeriesWeekly(series: MacroSeries): boolean {
+  if ((series.candles?.length ?? 0) > 0) {
+    return true;
+  }
+
+  return (
+    series.key.startsWith("rsi-score:") ||
+    series.key.startsWith("rsi-scorew:") ||
+    series.key.startsWith("rsi-internal:")
+  );
+}
+
+function toWeeklyChartSeries(series: MacroSeries): MacroSeries {
+  if (!shouldBucketSeriesWeekly(series)) {
+    return series;
+  }
+
+  const weeklySeries = buildWeeklySeries(series);
+  if (!weeklySeries) {
+    return series;
+  }
+
+  return {
+    ...series,
+    points: weeklySeries.points,
+    candles: weeklySeries.candles,
+    stats: weeklySeries.stats,
+  };
+}
+
+function projectSeriesForChartInterval(
+  series: MacroSeries[],
+  chartInterval: ChartInterval
+): MacroSeries[] {
+  if (chartInterval === "daily") {
+    return series;
+  }
+
+  return series.map((entry) => toWeeklyChartSeries(entry));
+}
+
+function toWeekStart(date: string): string {
+  return format(startOfWeek(parseISO(date), { weekStartsOn: 1 }), "yyyy-MM-dd");
+}
+
+function buildChartMarkers(
+  markers: SeriesWorkbenchProjectionInput["indicatorMarkers"],
+  chartInterval: ChartInterval
+): ChartMarker[] {
+  const projectedMarkers = markers.map((marker) => ({
+    key: marker.key,
+    startDateTs: parseISO(
+      chartInterval === "weekly" ? toWeekStart(marker.startDate) : marker.startDate
+    ).getTime(),
+    startValue: marker.startValue,
+    dateTs: parseISO(
+      chartInterval === "weekly" ? toWeekStart(marker.date) : marker.date
+    ).getTime(),
+    value: marker.value,
+    color: marker.color,
+    indicatorKey: marker.indicatorKey,
+  }));
+
+  if (chartInterval === "daily") {
+    return projectedMarkers;
+  }
+
+  const seen = new Set<string>();
+  return projectedMarkers.filter((marker) => {
+    const dedupeKey = `${marker.indicatorKey}:${marker.startDateTs}:${marker.dateTs}:${marker.value}`;
+    if (seen.has(dedupeKey)) {
+      return false;
+    }
+    seen.add(dedupeKey);
+    return true;
+  });
+}
+
 export function buildSeriesWorkbenchProjection({
+  chartInterval,
   companionSeriesKeysByIndicatorKey,
   indicatorMarkers,
   indicatorSeries,
@@ -230,23 +317,23 @@ export function buildSeriesWorkbenchProjection({
       ];
     })
   );
-  const overlayRows = buildDisplayRows(overlaySeries);
-  const indicatorRows = buildDisplayRows(indicatorSeries);
+  const projectedOverlaySeries = projectSeriesForChartInterval(
+    overlaySeries,
+    chartInterval
+  );
+  const projectedIndicatorSeries = projectSeriesForChartInterval(
+    indicatorSeries,
+    chartInterval
+  );
+  const overlayRows = buildDisplayRows(projectedOverlaySeries);
+  const indicatorRows = buildDisplayRows(projectedIndicatorSeries);
   const sharedDateDomain =
     getSharedDateDomain([overlayRows, indicatorRows]) ?? FALLBACK_DATE_DOMAIN;
   const visibleDateDomain = getVisibleDateDomain(
     sharedDateDomain,
     xRangePreset
   );
-  const chartMarkers = indicatorMarkers.map((marker) => ({
-    key: marker.key,
-    startDateTs: parseISO(marker.startDate).getTime(),
-    startValue: marker.startValue,
-    dateTs: parseISO(marker.date).getTime(),
-    value: marker.value,
-    color: marker.color,
-    indicatorKey: marker.indicatorKey,
-  }));
+  const chartMarkers = buildChartMarkers(indicatorMarkers, chartInterval);
 
   return {
     chartMarkers,

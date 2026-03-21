@@ -6,14 +6,17 @@ import type { WorkbenchSelectionSlot } from "@/lib/series-workbench-engine";
 import type { MacroSeries } from "@/types/macro";
 
 export type XRangePreset = "3m" | "6m" | "1y" | "2y" | "max";
+export type ChartInterval = "daily" | "weekly";
 
 const SLOT_COUNT = 6;
 const CHART_SPLIT_STORAGE_KEY = "macrolens:workbench-chart-split";
 const CHART_X_RANGE_STORAGE_KEY = "macrolens:workbench-x-range";
+const CHART_INTERVAL_STORAGE_KEY = "macrolens:workbench-chart-interval";
 const DEFAULT_CHART_SPLIT = 0.66;
 const MIN_CHART_SPLIT = 0.35;
 const MAX_CHART_SPLIT = 0.8;
 const DEFAULT_X_RANGE_PRESET: XRangePreset = "max";
+const DEFAULT_CHART_INTERVAL: ChartInterval = "daily";
 
 function buildInitialSlots(series: MacroSeries[]): WorkbenchSelectionSlot[] {
   const defaultSeriesKey =
@@ -64,6 +67,14 @@ function parseStoredXRangePreset(value: string | null): XRangePreset | null {
   return null;
 }
 
+function parseStoredChartInterval(value: string | null): ChartInterval | null {
+  if (value === "daily" || value === "weekly") {
+    return value;
+  }
+
+  return null;
+}
+
 export function getChartSplitFromPointer(
   container: HTMLDivElement | null,
   clientY: number
@@ -78,6 +89,7 @@ export function getChartSplitFromPointer(
 
 export interface SeriesWorkbenchSession {
   beginResize: (clientY: number) => void;
+  chartInterval: ChartInterval;
   chartSplit: number;
   chartStackRef: RefObject<HTMLDivElement | null>;
   chartsReady: boolean;
@@ -88,6 +100,7 @@ export interface SeriesWorkbenchSession {
   setChartSplit: Dispatch<SetStateAction<number>>;
   setIsResizing: Dispatch<SetStateAction<boolean>>;
   setSlots: Dispatch<SetStateAction<WorkbenchSelectionSlot[]>>;
+  setChartInterval: Dispatch<SetStateAction<ChartInterval>>;
   setXRangePreset: Dispatch<SetStateAction<XRangePreset>>;
   slots: WorkbenchSelectionSlot[];
   xRangePreset: XRangePreset;
@@ -102,6 +115,9 @@ export function useSeriesWorkbenchSession(
   );
   const deferredSlots = useDeferredValue(slots);
   const [chartSplit, setChartSplit] = useState(DEFAULT_CHART_SPLIT);
+  const [chartInterval, setChartInterval] = useState<ChartInterval>(
+    DEFAULT_CHART_INTERVAL
+  );
   const [xRangePreset, setXRangePreset] = useState<XRangePreset>(
     DEFAULT_X_RANGE_PRESET
   );
@@ -125,6 +141,21 @@ export function useSeriesWorkbenchSession(
   }, []);
 
   useEffect(() => {
+    const stored = parseStoredChartInterval(
+      window.localStorage.getItem(CHART_INTERVAL_STORAGE_KEY)
+    );
+    if (stored === null) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setChartInterval(stored);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  useEffect(() => {
     const stored = parseStoredXRangePreset(
       window.localStorage.getItem(CHART_X_RANGE_STORAGE_KEY)
     );
@@ -142,6 +173,10 @@ export function useSeriesWorkbenchSession(
   useEffect(() => {
     window.localStorage.setItem(CHART_SPLIT_STORAGE_KEY, chartSplit.toFixed(3));
   }, [chartSplit]);
+
+  useEffect(() => {
+    window.localStorage.setItem(CHART_INTERVAL_STORAGE_KEY, chartInterval);
+  }, [chartInterval]);
 
   useEffect(() => {
     window.localStorage.setItem(CHART_X_RANGE_STORAGE_KEY, xRangePreset);
@@ -195,6 +230,7 @@ export function useSeriesWorkbenchSession(
       }
       setIsResizing(true);
     },
+    chartInterval,
     chartSplit,
     chartStackRef,
     chartsReady,
@@ -205,6 +241,7 @@ export function useSeriesWorkbenchSession(
       setChartSplit((current) => clampChartSplit(current + delta));
     },
     setChartSplit,
+    setChartInterval,
     setIsResizing,
     setSlots,
     setXRangePreset,
