@@ -17,13 +17,16 @@ import {
 } from "recharts";
 import { formatNumber } from "@/lib/formatters";
 import {
-  buildCompanionIndicatorSeries,
   buildOverlayData,
-  buildRsiDivergenceMarkers,
-  buildRsiScoreIndicators,
   findCorrelationExtremes,
   isAssetSeries,
 } from "@/lib/series-analysis";
+import {
+  buildSeriesWorkbenchEngine,
+  type WorkbenchAxisMode,
+  type WorkbenchSelectionSlot,
+  type WorkbenchSlotDescriptor,
+} from "@/lib/series-workbench-engine";
 import type { MacroSeries } from "@/types/macro";
 
 interface Props {
@@ -72,34 +75,16 @@ interface ChartMarker {
   value: number;
 }
 
-interface SelectionSlot {
-  id: string;
-  indicatorAxisMode: AxisMode;
-  indicatorKey: string;
-  indicatorSeparateYAxis: boolean;
-  overlayAxisMode: AxisMode;
-  overlaySeparateYAxis: boolean;
-  seriesKey: string;
-}
-
-interface SlotDescriptor {
-  effectiveIndicatorKey: string;
-  id: string;
-  indicatorOptions: MacroSeries[];
-  selectedIndicator: MacroSeries | null;
-  selectedSeries: MacroSeries | null;
-}
-
 interface SelectionSlotRowProps {
   assetOptions: MacroSeries[];
   deferredSelectableSeries: MacroSeries[];
   macroOptions: MacroSeries[];
-  setSlots: Dispatch<SetStateAction<SelectionSlot[]>>;
-  slot: SlotDescriptor;
-  slotStateById: Map<string, SelectionSlot>;
+  setSlots: Dispatch<SetStateAction<WorkbenchSelectionSlot[]>>;
+  slot: WorkbenchSlotDescriptor;
+  slotStateById: Map<string, WorkbenchSelectionSlot>;
 }
 
-type AxisMode = "linear" | "log";
+type AxisMode = WorkbenchAxisMode;
 type XRangePreset = "3m" | "6m" | "1y" | "2y" | "max";
 
 const SLOT_COUNT = 6;
@@ -122,7 +107,7 @@ const X_RANGE_OPTIONS: Array<{ value: XRangePreset; label: string }> = [
   { value: "max", label: "Max" },
 ];
 
-function buildInitialSlots(series: MacroSeries[]): SelectionSlot[] {
+function buildInitialSlots(series: MacroSeries[]): WorkbenchSelectionSlot[] {
   const defaultSeriesKey =
     series.find((item) => item.key === "sp500")?.key ?? "";
 
@@ -141,19 +126,6 @@ function buildInitialSlots(series: MacroSeries[]): SelectionSlot[] {
       overlayAxisMode: "linear",
       indicatorAxisMode: "linear",
     };
-  });
-}
-
-function dedupeSeriesByKey(series: MacroSeries[]): MacroSeries[] {
-  const seen = new Set<string>();
-
-  return series.filter((item) => {
-    if (seen.has(item.key)) {
-      return false;
-    }
-
-    seen.add(item.key);
-    return true;
   });
 }
 
@@ -301,9 +273,9 @@ function canUseLogScale(series: MacroSeries[]): boolean {
 }
 
 function updateSlot(
-  setSlots: Dispatch<SetStateAction<SelectionSlot[]>>,
+  setSlots: Dispatch<SetStateAction<WorkbenchSelectionSlot[]>>,
   slotId: string,
-  updater: (entry: SelectionSlot) => SelectionSlot
+  updater: (entry: WorkbenchSelectionSlot) => WorkbenchSelectionSlot
 ): void {
   setSlots((current) =>
     current.map((entry) => (entry.id === slotId ? updater(entry) : entry))
@@ -824,7 +796,7 @@ function SelectionSlotRow({
 export function SeriesWorkbench({ series, className }: Props) {
   const selectableSeries = series.filter((item) => item.points.length > 2);
   const deferredSelectableSeries = useDeferredValue(selectableSeries);
-  const [slots, setSlots] = useState<SelectionSlot[]>(() =>
+  const [slots, setSlots] = useState<WorkbenchSelectionSlot[]>(() =>
     buildInitialSlots(selectableSeries)
   );
   const deferredSlots = useDeferredValue(slots);
@@ -845,52 +817,13 @@ export function SeriesWorkbench({ series, className }: Props) {
   const slotStateById = new Map(
     deferredSlots.map((slot) => [slot.id, slot] as const)
   );
-
-  const slotDescriptors: SlotDescriptor[] = deferredSlots.map((slot) => {
-    const selectedSeries =
-      deferredSelectableSeries.find((item) => item.key === slot.seriesKey) ??
-      null;
-    const indicatorOptions = selectedSeries
-      ? buildRsiScoreIndicators(selectedSeries)
-      : [];
-    let effectiveIndicatorKey = "";
-    if (
-      slot.indicatorKey !== "" &&
-      indicatorOptions.some((item) => item.key === slot.indicatorKey)
-    ) {
-      effectiveIndicatorKey = slot.indicatorKey;
-    }
-    const selectedIndicator =
-      indicatorOptions.find((item) => item.key === effectiveIndicatorKey) ??
-      null;
-
-    return {
-      id: slot.id,
-      selectedSeries,
-      indicatorOptions,
-      effectiveIndicatorKey,
-      selectedIndicator,
-    };
-  });
-
-  const overlaySeries = dedupeSeriesByKey(
-    slotDescriptors.flatMap((slot) =>
-      slot.selectedSeries ? [slot.selectedSeries] : []
-    )
-  );
-  const indicatorSeries = dedupeSeriesByKey(
-    slotDescriptors.flatMap((slot) =>
-      slot.selectedIndicator
-        ? [
-            slot.selectedIndicator,
-            ...buildCompanionIndicatorSeries(
-              slot.selectedSeries ?? slot.selectedIndicator,
-              slot.selectedIndicator
-            ),
-          ]
-        : []
-    )
-  );
+  const {
+    companionSeriesKeysByIndicatorKey,
+    slotDescriptors,
+    overlaySeries,
+    indicatorSeries,
+    indicatorMarkers,
+  } = buildSeriesWorkbenchEngine(deferredSelectableSeries, deferredSlots);
   const overlayAxisModeByKey = new Map(
     slotDescriptors
       .map((slot) => {
@@ -914,10 +847,9 @@ export function SeriesWorkbench({ series, className }: Props) {
       const axisMode = slotState?.indicatorAxisMode ?? "linear";
       return [
         [slot.selectedIndicator.key, axisMode] as const,
-        ...buildCompanionIndicatorSeries(
-          slot.selectedSeries,
-          slot.selectedIndicator
-        ).map((series) => [series.key, axisMode] as const),
+        ...(companionSeriesKeysByIndicatorKey.get(slot.selectedIndicator.key) ??
+          []
+        ).map((seriesKey) => [seriesKey, axisMode] as const),
       ];
     })
   );
@@ -949,10 +881,8 @@ export function SeriesWorkbench({ series, className }: Props) {
 
       return [
         slot.selectedIndicator.key,
-        ...buildCompanionIndicatorSeries(
-          slot.selectedSeries,
-          slot.selectedIndicator
-        ).map((series) => series.key),
+        ...(companionSeriesKeysByIndicatorKey.get(slot.selectedIndicator.key) ??
+          []),
       ];
     })
   );
@@ -1043,29 +973,15 @@ export function SeriesWorkbench({ series, className }: Props) {
     sharedDateDomain,
     xRangePreset
   );
-  const indicatorMarkers = slotDescriptors
-    .flatMap((slot) => {
-      if (!(slot.selectedSeries && slot.selectedIndicator)) {
-        return [];
-      }
-
-      return buildRsiDivergenceMarkers(
-        slot.selectedSeries,
-        slot.selectedIndicator
-      ).map((marker) => ({
-        key: marker.key,
-        startDateTs: parseISO(marker.startDate).getTime(),
-        startValue: marker.startValue,
-        dateTs: parseISO(marker.date).getTime(),
-        value: marker.value,
-        color: marker.color,
-        indicatorKey: marker.indicatorKey,
-      }));
-    })
-    .filter(
-      (marker, index, list) =>
-        list.findIndex((item) => item.key === marker.key) === index
-    );
+  const chartMarkers = indicatorMarkers.map((marker) => ({
+    key: marker.key,
+    startDateTs: parseISO(marker.startDate).getTime(),
+    startValue: marker.startValue,
+    dateTs: parseISO(marker.date).getTime(),
+    value: marker.value,
+    color: marker.color,
+    indicatorKey: marker.indicatorKey,
+  }));
   const topChartShare = Math.round(chartSplit * 100);
   const rootClassName = ["mx-auto w-full max-w-7xl min-h-0", className ?? ""]
     .join(" ")
@@ -1222,7 +1138,7 @@ export function SeriesWorkbench({ series, className }: Props) {
                   axisModeByKey={indicatorAxisModeByKey}
                   emptyMessage="Mindestens einen Indikator in einem rechten Dropdown waehlen."
                   isReady={chartsReady}
-                  markers={indicatorMarkers}
+                  markers={chartMarkers}
                   onXRangeChange={setXRangePreset}
                   rows={indicatorRows}
                   separateYAxisKeys={indicatorSeparateYAxisKeys}

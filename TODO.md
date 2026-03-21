@@ -4,7 +4,6 @@
 
 ## P1 (Next)
 
-- [ ] Architektur-Refactor vorbereiten: Workbench-Indikator-/Overlay-Logik aus `apps/web/src/components/series-workbench.tsx` und `apps/web/src/lib/series-analysis.ts` in ein tieferes Engine-Modul schneiden, das Slot-Auswahl, Companion-Reihen, Divergenzmarker, Overlays und Korrelationen als zusammenhaengendes Datenpaket liefert.
 - [ ] Architektur-Refactor vorbereiten: `apps/web/src/components/series-workbench.tsx` in ein Session-/Projection-Modul plus Rendering aufteilen, damit Slot-State, Persistenz, Achsenregeln und X-Domain-Logik nicht weiter in einer 1200-Zeilen-Client-Komponente vermischt bleiben.
 
 ## P2 (Later)
