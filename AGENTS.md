@@ -14,9 +14,10 @@
 - You MUST NOT put secrets in the repo, chat, logs, or docs; use local `.env.local`.
 - You MUST NOT make topology or infrastructure assumptions without local evidence from the running system (`docker ps`, `docker inspect`, `tailscale status`, `tailscale serve status`).
 - You MUST NOT overwrite or revert unrelated user changes to simplify a task.
-- Use subagents when they materially improve parallelism or separation of concerns for a clearly scoped task.
+- You should use subagents.
 - Follow `docs/policies/policy_docs_contract.md` for document boundaries and update targets.
 - Follow `docs/git-workflow.md` for git workflow rules.
+- You MUST end each completed task with a git commit unless the user explicitly says not to commit.
 
 ## Gates
 
@@ -41,6 +42,7 @@
 - The functional fix or change is implemented.
 - Verification is completed (`npm run lint`, `npm run build` when needed, plus runtime checks for ops topics).
 - Required repo-document updates are completed according to `docs/policies/policy_docs_contract.md`.
+- The task ends with a git commit unless the user explicitly says not to commit.
 
 ## Deny List
 - You MUST NOT run destructive git, file, database, or migration actions unless the user explicitly requested that exact action.

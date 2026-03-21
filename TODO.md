@@ -4,10 +4,10 @@
 
 ## P1 (Next)
 
-- [ ] Architektur-Refactor vorbereiten: `apps/web/src/lib/dashboard-data.ts` von flacher Orchestrierung zu einer echten Dashboard-Pipeline vertiefen, die Provider-Fetching, Warning-Assembly und Signal-Bildung an einer stabilen Boundary kapselt; Boundary-Tests statt verteilter Provider-/Assembler-Tests.
+- [ ] Dashboard-Pipeline weiter vertiefen: nach Extraktion von `apps/web/src/lib/dashboard-pipeline.ts` Provider-Diagnostik und Boundary-Szenarien weiter ausbauen, damit `apps/web/src/lib/dashboard-data.ts` dauerhaft nur der schmale Einstieg bleibt.
 - [ ] Architektur-Refactor vorbereiten: Workbench-Indikator-/Overlay-Logik aus `apps/web/src/components/series-workbench.tsx` und `apps/web/src/lib/series-analysis.ts` in ein tieferes Engine-Modul schneiden, das Slot-Auswahl, Companion-Reihen, Divergenzmarker, Overlays und Korrelationen als zusammenhaengendes Datenpaket liefert.
 - [ ] Architektur-Refactor vorbereiten: `apps/web/src/components/series-workbench.tsx` in ein Session-/Projection-Modul plus Rendering aufteilen, damit Slot-State, Persistenz, Achsenregeln und X-Domain-Logik nicht weiter in einer 1200-Zeilen-Client-Komponente vermischt bleiben.
-- [ ] Architektur-Refactor vorbereiten: Makro-Signal-Regeln in `apps/web/src/lib/macro-derivations.ts` als regelbasiertes Deep-Module neu schneiden, statt weitere Key-Lookups und Schwellenwerte direkt in parallelen Spezialfunktionen zu verteilen.
+- [ ] Makro-Signal-Regelwerk weiter vertiefen: nach Auslagerung nach `apps/web/src/lib/macro-signal-rules.ts` Schwellenwerte und Inputs deklarativer schneiden, damit neue Regeln nicht weiter als Einzel-Funktionen anwachsen.
 
 ## P2 (Later)
 
