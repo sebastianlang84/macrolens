@@ -426,7 +426,6 @@ function SelectionSlotRow({
   slot,
   slotStateById,
 }: SelectionSlotRowProps) {
-  const slotIsActive = Boolean(slot.selectedSeries || slot.selectedIndicator);
   const slotState = slotStateById.get(slot.id);
   const overlayLogActive = (slotState?.overlayAxisMode ?? "linear") === "log";
   const indicatorLogActive =
@@ -450,21 +449,11 @@ function SelectionSlotRow({
   const indicatorLogLabel = `${slotLabel}: Logarithmische Skala fuer Indikator ${indicatorLabel}`;
 
   return (
-    <div
-      className={`rounded-lg border p-2 shadow-sm transition ${
-        slotIsActive
-          ? "border-slate-200 bg-white"
-          : "border-slate-100 bg-slate-50/70"
-      }`}
-    >
+    <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
         <label className="grid min-w-0 gap-1">
           <select
-            className={`w-full rounded-md border px-2 py-1.5 text-xs ${
-              slotIsActive
-                ? "border-slate-300 bg-white text-slate-800"
-                : "border-slate-200 bg-white/80 text-slate-600"
-            }`}
+            className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-800 text-xs"
             onChange={(event) => {
               const nextSeriesKey = event.target.value;
               const nextSeries =
@@ -503,11 +492,7 @@ function SelectionSlotRow({
           </select>
         </label>
         <label
-          className={`inline-flex items-center justify-center rounded-md border px-2 py-1.5 text-[11px] ${
-            slotIsActive
-              ? "border-slate-300 bg-slate-50 text-slate-600"
-              : "border-slate-200 bg-white/70 text-slate-400"
-          }`}
+          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
           title={
             overlayLogActive
               ? "Aktiv, weil Log-Skala fuer diese Reihe eine eigene Y-Achse erzwingt"
@@ -547,11 +532,7 @@ function SelectionSlotRow({
 
         <label className="grid min-w-0 gap-1">
           <select
-            className={`w-full rounded-md border px-2 py-1.5 text-xs disabled:text-slate-400 ${
-              slotIsActive
-                ? "border-slate-300 bg-white text-slate-800 disabled:bg-slate-100"
-                : "border-slate-200 bg-white/80 text-slate-500 disabled:bg-white/60"
-            }`}
+            className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-slate-800 text-xs disabled:bg-slate-100 disabled:text-slate-400"
             disabled={
               !slot.selectedSeries || slot.indicatorOptions.length === 0
             }
@@ -582,11 +563,7 @@ function SelectionSlotRow({
           </select>
         </label>
         <label
-          className={`inline-flex items-center justify-center rounded-md border px-2 py-1.5 text-[11px] ${
-            slotIsActive
-              ? "border-slate-300 bg-slate-50 text-slate-600"
-              : "border-slate-200 bg-white/70 text-slate-400"
-          }`}
+          className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600"
           title={
             indicatorLogActive
               ? "Aktiv, weil Log-Skala fuer diesen Indikator eine eigene Y-Achse erzwingt"
@@ -736,7 +713,7 @@ export function SeriesWorkbench({ series, className }: Props) {
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 lg:flex-row">
-          <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:w-[23.5rem]">
+          <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:w-[25rem]">
             <div className="border-slate-200 border-b px-1 pb-2">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
                 <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
@@ -760,7 +737,7 @@ export function SeriesWorkbench({ series, className }: Props) {
               </div>
             </div>
 
-            <div className="mt-2 flex max-h-[24rem] flex-col gap-1.5 overflow-y-auto pr-1 lg:h-[calc(100%-3.25rem)] lg:max-h-none lg:min-h-0">
+            <div className="mt-2 flex max-h-[24rem] flex-col gap-2 overflow-y-auto pr-1 lg:h-[calc(100%-3.25rem)] lg:max-h-none lg:min-h-0">
               {slotDescriptors.map((slot) => (
                 <SelectionSlotRow
                   assetOptions={assetOptions}
