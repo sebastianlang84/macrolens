@@ -754,7 +754,7 @@ export function SeriesWorkbench({ series, className }: Props) {
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 lg:flex-row">
-          <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:w-[23.5rem]">
+          <aside className="w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-2 lg:w-[23.5rem] lg:self-start">
             <div className="border-slate-200 border-b px-1 pb-2">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2">
                 <p className="font-semibold text-[11px] text-slate-500 uppercase tracking-[0.12em]">
@@ -778,7 +778,7 @@ export function SeriesWorkbench({ series, className }: Props) {
               </div>
             </div>
 
-            <div className="mt-2 flex max-h-[24rem] flex-col gap-1.5 overflow-y-auto pr-1 lg:h-[calc(100%-3.25rem)] lg:max-h-none lg:min-h-0">
+            <div className="mt-2 flex max-h-[24rem] flex-col gap-1.5 overflow-y-auto pr-1">
               {visibleSlotDescriptors.map((slot) => (
                 <SelectionSlotRow
                   assetOptions={assetOptions}
