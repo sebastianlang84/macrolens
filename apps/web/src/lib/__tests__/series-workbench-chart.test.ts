@@ -1,6 +1,9 @@
 import { addDays, formatISO } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { buildSeriesWorkbenchProjection } from "@/lib/series-workbench-chart";
+import {
+  buildSeriesWorkbenchProjection,
+  formatChartAxisValue,
+} from "@/lib/series-workbench-chart";
 import type { WorkbenchSelectionSlot, WorkbenchSlotDescriptor } from "@/lib/series-workbench-engine";
 import type { CandlePoint, MacroSeries } from "@/types/macro";
 
@@ -90,6 +93,12 @@ function makeDescriptor(
 }
 
 describe("series-workbench-chart", () => {
+  it("formats four-digit axis ticks without collapsing distinct values to the same label", () => {
+    expect(formatChartAxisValue(6900)).toBe("6,9k");
+    expect(formatChartAxisValue(7000)).toBe("7k");
+    expect(formatChartAxisValue(7100)).toBe("7,1k");
+  });
+
   it("aggregates candle-backed overlay series to weekly rows while preserving keys", () => {
     const candles = makeDailyCandles("2026-01-05", [
       { close: 100, high: 101, low: 99 },

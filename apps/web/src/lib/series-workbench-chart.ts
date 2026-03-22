@@ -43,7 +43,9 @@ export function buildDisplayRows(series: MacroSeries[]): OverlayRow[] {
 
 export function formatChartAxisValue(value: number): string {
   if (Math.abs(value) >= 1000) {
-    return `${Math.round(value / 1000)}k`;
+    const scaledValue = value / 1000;
+    const digits = Math.abs(scaledValue) < 10 && !Number.isInteger(scaledValue) ? 1 : 0;
+    return `${formatNumber(scaledValue, digits)}k`;
   }
   return formatNumber(value, 1);
 }
