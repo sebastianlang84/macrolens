@@ -148,14 +148,8 @@ function renderSeparateYAxis(
 ) {
   const axisMode = axisModeByKey.get(item.key) ?? "linear";
   const axisScale = axisMode === "log" ? "log" : "linear";
-  const isOscillatorSeries =
-    item.key.startsWith("rsi-score:") ||
-    item.key.startsWith("rsi-scorew:") ||
-    item.key.startsWith("rsi-internal:");
   const axisDomain =
-    isOscillatorSeries
-      ? ([0, 100] as const)
-      : axisScale === "log"
+    axisScale === "log"
       ? ([getPositiveMinForKey(visibleRows, item.key) ?? 1, "auto"] as const)
       : (["auto", "auto"] as const);
   const showTicks = sharedSeriesLength === 0 && idx === 0;
@@ -238,14 +232,6 @@ function ChartPanel({
   );
   const visibleRows = filterRowsToDomain(rows, xDomain);
   const visibleMarkers = filterMarkersToDomain(markers, xDomain);
-  const useOscillatorDomain =
-    series.length > 0 &&
-    series.every(
-      (item) =>
-        item.key.startsWith("rsi-score:") ||
-        item.key.startsWith("rsi-scorew:") ||
-        item.key.startsWith("rsi-internal:")
-    );
   const sharedSeries = series.filter((item) => {
     const axisMode = axisModeByKey.get(item.key) ?? "linear";
     return axisMode === "linear" && !separateYAxisKeys.has(item.key);
@@ -302,7 +288,7 @@ function ChartPanel({
                 />
                 <YAxis
                   axisLine={false}
-                  domain={useOscillatorDomain ? [0, 100] : ["auto", "auto"]}
+                  domain={["auto", "auto"]}
                   hide={sharedSeries.length === 0}
                   scale="linear"
                   tick={{ fontSize: 11, fill: "#64748b" }}

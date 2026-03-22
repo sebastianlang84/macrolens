@@ -19,6 +19,7 @@ The format is based on Keep a Changelog.
 - Workbench-A11y fuer Slot-Steuerung und Hover-Readout verbessert: Y-Checkboxen und `L`-Buttons haben eindeutige zugaengliche Namen, und der visuelle Chart-Readout spammt Screenreader nicht mehr ueber `aria-live`.
 - Desktop-Chart-Splitter bewegt die sichtbare Trennlinie wieder konsistent: der Workbench-Container hat auf `lg` nun wieder eine definite Hoehe, sodass die `fr`-Grid-Zeilen des oberen/unteren Charts tatsaechlich auf Drag-Aenderungen reagieren statt nur den Prozentwert zu aktualisieren.
 - Workbench-Y-Achsen runden vierstellige Kursbereiche nicht mehr auf identische `7k`-Ticks zusammen; S&P-500-nahe Werte wie `6.9k`, `7.0k`, `7.1k` bleiben auf der auto-skalierten Achse unterscheidbar.
+- Workbench-Indikatorcharts erzwingen fuer RSI/RSI-Score keine starre `0..100`-Skala mehr; die sichtbare Y-Achse folgt im unteren Chart jetzt wieder dem tatsaechlichen Wertebereich.
 
 ### Changed
 - `AGENTS.md` verweist auf Root-Dokumente jetzt nur noch ueber eine eigene `Key Files`-Sektion ohne Lesebefehl; welche Dateien tatsaechlich gelesen werden muessen, ergibt sich taskbezogen aus Diagnose und Verifikation.
