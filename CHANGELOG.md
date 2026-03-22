@@ -20,6 +20,7 @@ The format is based on Keep a Changelog.
 - Desktop-Chart-Splitter bewegt die sichtbare Trennlinie wieder konsistent: der Workbench-Container hat auf `lg` nun wieder eine definite Hoehe, sodass die `fr`-Grid-Zeilen des oberen/unteren Charts tatsaechlich auf Drag-Aenderungen reagieren statt nur den Prozentwert zu aktualisieren.
 - Workbench-Y-Achsen runden vierstellige Kursbereiche nicht mehr auf identische `7k`-Ticks zusammen; S&P-500-nahe Werte wie `6.9k`, `7.0k`, `7.1k` bleiben auf der auto-skalierten Achse unterscheidbar.
 - Workbench-RSI-/RSI-Score-Charts nutzen wieder die fachlich uebliche feste `0..100`-Skala; `30` und `70` sind als visuelle Leitlinien fuer ueberverkauft/ueberkauft markiert, wenn das sichtbare Panel ausschliesslich aus RSI-/RSI-Score-Reihen besteht.
+- Workbench kennzeichnet den `RSI Score` jetzt explizit als um `50` zentrierten Divergenz-Score; im Chart-Hinweis wird klargestellt, dass `30/70` nur fuer den klassischen `RSI 14` gelten.
 
 ### Changed
 - `AGENTS.md` verweist auf Root-Dokumente jetzt nur noch ueber eine eigene `Key Files`-Sektion ohne Lesebefehl; welche Dateien tatsaechlich gelesen werden muessen, ergibt sich taskbezogen aus Diagnose und Verifikation.

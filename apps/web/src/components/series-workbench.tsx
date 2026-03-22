@@ -146,6 +146,10 @@ function isRsiStyleSeries(item: MacroSeries): boolean {
   );
 }
 
+function isRsiScoreSeries(item: MacroSeries): boolean {
+  return item.key.startsWith("rsi-score:") || item.key.startsWith("rsi-scorew:");
+}
+
 function renderSeparateYAxis(
   item: MacroSeries,
   idx: number,
@@ -244,6 +248,8 @@ function ChartPanel({
   const visibleMarkers = filterMarkersToDomain(markers, xDomain);
   const showRsiGuideLines =
     series.length > 0 && series.every((item) => isRsiStyleSeries(item));
+  const showsRsiScore =
+    series.length > 0 && series.some((item) => isRsiScoreSeries(item));
   const sharedSeries = series.filter((item) => {
     const axisMode = axisModeByKey.get(item.key) ?? "linear";
     return axisMode === "linear" && !separateYAxisKeys.has(item.key);
@@ -448,6 +454,12 @@ function ChartPanel({
               {title}
             </p>
             <p className="mt-1 text-slate-600 text-xs">{subtitle}</p>
+            {showsRsiScore ? (
+              <p className="mt-1 text-[11px] text-slate-500">
+                `RSI Score` ist kein klassischer RSI: der Score ist um `50`
+                zentriert. `30/70` gelten nur fuer `RSI 14`.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5">

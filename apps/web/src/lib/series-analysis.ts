@@ -427,7 +427,7 @@ function buildRsiScoreSeriesForInput(
     scoreSeries: createDerivedSeries(
       outputBaseSeries,
       `${keyPrefix}:${outputBaseSeries.key}`,
-      `RSI Score${labelSuffix} (${outputBaseSeries.label})`,
+      `RSI Divergence Score${labelSuffix} (${outputBaseSeries.label})`,
       `RSI Score${shortLabelSuffix} (${outputBaseSeries.shortLabel})`,
       "Um 50 zentrierter, trendgewichteter Momentum-Divergenz-Score mit low-lag Glaettung; oberhalb von 50 heisst Momentum staerker als die Preisaktion.",
       color,
