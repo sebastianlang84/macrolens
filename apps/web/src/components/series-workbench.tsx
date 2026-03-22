@@ -138,6 +138,14 @@ function renderChartPlaceholder(message: string) {
   );
 }
 
+function isRsiStyleSeries(item: MacroSeries): boolean {
+  return (
+    item.key.startsWith("rsi-score:") ||
+    item.key.startsWith("rsi-scorew:") ||
+    item.key.startsWith("rsi-internal:")
+  );
+}
+
 function renderSeparateYAxis(
   item: MacroSeries,
   idx: number,
@@ -232,6 +240,8 @@ function ChartPanel({
   );
   const visibleRows = filterRowsToDomain(rows, xDomain);
   const visibleMarkers = filterMarkersToDomain(markers, xDomain);
+  const showRsiGuideLines =
+    series.length > 0 && series.every((item) => isRsiStyleSeries(item));
   const sharedSeries = series.filter((item) => {
     const axisMode = axisModeByKey.get(item.key) ?? "linear";
     return axisMode === "linear" && !separateYAxisKeys.has(item.key);
@@ -311,6 +321,34 @@ function ChartPanel({
                   content={() => null}
                   cursor={{ stroke: "#94a3b8", strokeDasharray: "4 4" }}
                 />
+                {showRsiGuideLines && sharedSeries.length > 0
+                  ? [30, 70].map((threshold) => (
+                      <ReferenceLine
+                        ifOverflow="extendDomain"
+                        key={`rsi-threshold-shared-${threshold}`}
+                        stroke="#94a3b8"
+                        strokeDasharray="5 5"
+                        strokeWidth={1}
+                        y={threshold}
+                        yAxisId="shared"
+                      />
+                    ))
+                  : null}
+                {showRsiGuideLines
+                  ? separateSeries.map((item) =>
+                      [30, 70].map((threshold) => (
+                        <ReferenceLine
+                          ifOverflow="extendDomain"
+                          key={`rsi-threshold-${item.key}-${threshold}`}
+                          stroke="#94a3b8"
+                          strokeDasharray="5 5"
+                          strokeWidth={1}
+                          y={threshold}
+                          yAxisId={item.key}
+                        />
+                      ))
+                    )
+                  : null}
                 <Legend wrapperStyle={{ fontSize: "12px" }} />
                 {series.map((item) => (
                   <Line
