@@ -157,7 +157,9 @@ function renderSeparateYAxis(
   const axisMode = axisModeByKey.get(item.key) ?? "linear";
   const axisScale = axisMode === "log" ? "log" : "linear";
   const axisDomain =
-    axisScale === "log"
+    isRsiStyleSeries(item)
+      ? ([0, 100] as const)
+      : axisScale === "log"
       ? ([getPositiveMinForKey(visibleRows, item.key) ?? 1, "auto"] as const)
       : (["auto", "auto"] as const);
   const showTicks = sharedSeriesLength === 0 && idx === 0;
@@ -298,7 +300,7 @@ function ChartPanel({
                 />
                 <YAxis
                   axisLine={false}
-                  domain={["auto", "auto"]}
+                  domain={showRsiGuideLines ? [0, 100] : ["auto", "auto"]}
                   hide={sharedSeries.length === 0}
                   scale="linear"
                   tick={{ fontSize: 11, fill: "#64748b" }}
