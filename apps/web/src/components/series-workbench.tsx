@@ -685,24 +685,6 @@ export function SeriesWorkbench({ series, className }: Props) {
     slotStateById,
     xRangePreset,
   });
-  const activeSlotDescriptors = slotDescriptors.filter(
-    (slot) => slot.selectedSeries || slot.selectedIndicator
-  );
-  const nextEmptySlot = slotDescriptors.find(
-    (slot) => !(slot.selectedSeries || slot.selectedIndicator)
-  );
-  const visibleSlotDescriptors =
-    activeSlotDescriptors.length > 0
-      ? nextEmptySlot
-        ? [...activeSlotDescriptors, nextEmptySlot]
-        : activeSlotDescriptors
-      : nextEmptySlot
-        ? [nextEmptySlot]
-        : [];
-  const hiddenSlotCount = Math.max(
-    0,
-    SERIES_WORKBENCH_SLOT_COUNT - visibleSlotDescriptors.length
-  );
   const topChartShare = Math.round(chartSplit * 100);
   const rootClassName = ["mx-auto w-full max-w-7xl min-h-0", className ?? ""]
     .join(" ")
@@ -779,7 +761,7 @@ export function SeriesWorkbench({ series, className }: Props) {
             </div>
 
             <div className="mt-2 flex max-h-[24rem] flex-col gap-1.5 overflow-y-auto pr-1 lg:h-[calc(100%-3.25rem)] lg:max-h-none lg:min-h-0">
-              {visibleSlotDescriptors.map((slot) => (
+              {slotDescriptors.map((slot) => (
                 <SelectionSlotRow
                   assetOptions={assetOptions}
                   deferredSelectableSeries={deferredSelectableSeries}
@@ -790,12 +772,6 @@ export function SeriesWorkbench({ series, className }: Props) {
                   slotStateById={slotStateById}
                 />
               ))}
-
-              {hiddenSlotCount > 0 ? (
-                <p className="px-1 pt-1 text-[11px] text-slate-400">
-                  {hiddenSlotCount} leere Slots ausgeblendet.
-                </p>
-              ) : null}
             </div>
           </aside>
 
