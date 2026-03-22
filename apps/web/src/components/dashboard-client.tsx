@@ -13,7 +13,7 @@ export function DashboardClient({ data }: Props) {
 
   return (
     <main className="min-h-[100dvh] px-2 py-2 md:px-3 md:py-3">
-      <div className="mx-auto flex max-w-7xl flex-col gap-2 lg:min-h-[calc(100dvh-1.5rem)]">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 lg:h-[calc(100dvh-1.5rem)]">
         <section className="relative overflow-hidden rounded-2xl border border-white/20 bg-slate-950 px-4 py-3 text-white shadow-lg">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(56,189,248,0.22),transparent_36%),radial-gradient(circle_at_90%_20%,rgba(16,185,129,0.18),transparent_32%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-2">
