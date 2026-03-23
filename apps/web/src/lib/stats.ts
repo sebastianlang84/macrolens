@@ -8,12 +8,16 @@ function pctChange(from: number, to: number): number {
   return ((to - from) / from) * 100;
 }
 
-function pickPointNearEnd(points: TimePoint[], daysBack: number): TimePoint | null {
-  if (points.length === 0) {
+function pickPointNearEnd(
+  points: TimePoint[],
+  daysBack: number
+): TimePoint | null {
+  const latestPoint = points.at(-1);
+  if (!latestPoint) {
     return null;
   }
 
-  const latestDate = new Date(points[points.length - 1].date).getTime();
+  const latestDate = new Date(latestPoint.date).getTime();
   const target = latestDate - daysBack * 24 * 60 * 60 * 1000;
 
   let best: TimePoint | null = null;
@@ -31,7 +35,8 @@ function pickPointNearEnd(points: TimePoint[], daysBack: number): TimePoint | nu
 }
 
 export function computeSeriesStats(points: TimePoint[]): SeriesStats {
-  if (points.length === 0) {
+  const latest = points.at(-1);
+  if (!latest) {
     return {
       latestValue: null,
       change1mPct: null,
@@ -40,7 +45,6 @@ export function computeSeriesStats(points: TimePoint[]): SeriesStats {
     };
   }
 
-  const latest = points[points.length - 1];
   const p1m = pickPointNearEnd(points, 30);
   const p3m = pickPointNearEnd(points, 90);
   const p1y = pickPointNearEnd(points, 365);
@@ -60,4 +64,3 @@ export function computeSeriesStats(points: TimePoint[]): SeriesStats {
     change1yPct: safePct(p1y),
   };
 }
-

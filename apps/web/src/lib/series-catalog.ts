@@ -1,17 +1,17 @@
 import type { DataSource, SeriesUnit } from "@/types/macro";
 
-export type SeriesSpec = {
+export interface SeriesSpec {
+  color: string;
+  description: string;
   key: string;
   label: string;
+  lookbackYears: number;
+  providerId: string;
+  proxyNote?: string;
   shortLabel: string;
   source: DataSource;
   unit: SeriesUnit;
-  description: string;
-  providerId: string;
-  lookbackYears: number;
-  color: string;
-  proxyNote?: string;
-};
+}
 
 export const SERIES_CATALOG: SeriesSpec[] = [
   {
@@ -47,6 +47,29 @@ export const SERIES_CATALOG: SeriesSpec[] = [
     lookbackYears: 3,
     color: "#0f766e",
     proxyNote: "RSP ETF als praktikabler Proxy für S&P 500 Equal Weight.",
+  },
+  {
+    key: "gold",
+    label: "Gold (Front Month)",
+    shortLabel: "Gold",
+    source: "yahoo",
+    unit: "usd",
+    description: "Gold-Futures als klassischer Defensiv-/Realzins-Proxy.",
+    providerId: "GC=F",
+    lookbackYears: 3,
+    color: "#d4a017",
+  },
+  {
+    key: "bitcoin",
+    label: "Bitcoin",
+    shortLabel: "Bitcoin",
+    source: "yahoo",
+    unit: "usd",
+    description:
+      "BTC/USD als liquider Risk-/Liquiditaetsindikator mit 24/7-Handel.",
+    providerId: "BTC-USD",
+    lookbackYears: 3,
+    color: "#f97316",
   },
   {
     key: "vix",
@@ -131,7 +154,8 @@ export const SERIES_CATALOG: SeriesSpec[] = [
     shortLabel: "IG OAS",
     source: "fred",
     unit: "percent",
-    description: "ICE BofA US Corporate Index OAS (Spread in Prozentpunkten, FRED).",
+    description:
+      "ICE BofA US Corporate Index OAS (Spread in Prozentpunkten, FRED).",
     providerId: "BAMLC0A0CM",
     lookbackYears: 10,
     color: "#0369a1",
@@ -142,7 +166,8 @@ export const SERIES_CATALOG: SeriesSpec[] = [
     shortLabel: "HY OAS",
     source: "fred",
     unit: "percent",
-    description: "ICE BofA US High Yield Index OAS (Spread in Prozentpunkten, FRED).",
+    description:
+      "ICE BofA US High Yield Index OAS (Spread in Prozentpunkten, FRED).",
     providerId: "BAMLH0A0HYM2",
     lookbackYears: 10,
     color: "#be123c",

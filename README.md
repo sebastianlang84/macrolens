@@ -86,6 +86,24 @@ docker compose up -d --build
 
 Das Compose-Setup nutzt `restart: unless-stopped`, damit der Container nach Reboots wieder hochkommt.
 Hinweis: Auf dem Linux-Host wird die App absichtlich auf `127.0.0.1:3001` veröffentlicht, damit bestehende Dienste auf Port `3000` nicht gestört werden.
+Wichtig fuer dieses Setup: `docker-compose.yml` setzt explizite DNS-Server (`1.1.1.1`, `8.8.8.8`), weil Docker hier zeitweise einen nicht aufloesbaren Upstream-Resolver uebernommen hatte und externe Datenquellen dann in der UI leer blieben.
+
+## Remote Access Hinweis
+
+`openclaw.tail027324.ts.net` und `owui.tail027324.ts.net` gehoeren zur separaten `ai_stack`-Topologie (OpenClaw/Open WebUI) und sind kein dauerhafter MacroLens-Endpunkt.
+
+MacroLens selbst laeuft in diesem Repo per Docker auf:
+- `http://127.0.0.1:3001`
+
+## Kurz-Runbook: UI zeigt keine Daten
+
+1. `docker compose ps` ausfuehren und pruefen, ob `web` healthy ist.
+2. `curl -I http://127.0.0.1:3001` ausfuehren. Erwartet: `HTTP/1.1 200 OK`.
+3. `curl http://127.0.0.1:3001/api/dashboard` pruefen:
+   - Leere `points` mit `error: "fetch failed"` deuten hier auf ein Container-DNS-Problem hin.
+4. `docker exec macrolens-web cat /etc/resolv.conf` pruefen:
+   - Erwartet sind `ExtServers: [1.1.1.1 8.8.8.8]`.
+5. Falls noetig: `docker compose up -d web` zum Neuerstellen des Services nach Compose-Aenderungen.
 
 ## Qualitäts-Checks (lokal)
 
@@ -116,14 +134,18 @@ npm run build
 - Parsing der Provider-Antworten
 
 3. `apps/web/src/lib/dashboard-data.ts`
-- Aggregiert alle Serien
-- Baut Warnungen + Signale
+- Schmaler Einstieg fuer die Dashboard-Pipeline
+- Reicht nur `FRED_API_KEY` in die Aggregation weiter
 
 4. `apps/web/src/lib/macro-derivations.ts`
-- Heuristiken wie Trend, Breite, VIX-Regime, Öl-Impuls, Payroll-Momentum
+- Leitet Signale aus der Rule-Registry ab und baut Warnings
 
 5. `apps/web/src/components/*`
 - Darstellung (UI + Charts)
+
+Ergaenzend:
+- `apps/web/src/lib/dashboard-pipeline.ts` kapselt Provider-Fetching, Signalableitung, Warning-Assembly und einen optionalen Diagnostik-Hook fuer Provider-Zusammenfassungen und Slow-Fetches.
+- `apps/web/src/lib/macro-signal-rules.ts` haelt die Makro-Heuristiken deklarativ als gemeinsame Rule-Definitionen mit Schwellenwerten und Inputs.
 
 ## Architekturdiagramm (Mermaid)
 
@@ -235,6 +257,17 @@ sequenceDiagram
 - Grundlagen & Begriffe: `docs/learning-guide.md`
 - Projekt-Navigation: `INDEX.md`
 - Projektstatus / offene Punkte: `MEMORY.md`
+- Aktive Arbeit: `TODO.md`
+- Repo-weite Doku-Grenzen: `docs/policies/policy_docs_contract.md`
+
+## Dokumentationsgrenzen (kurz)
+
+- `README.md`: Setup, Betrieb, Nutzung, Troubleshooting.
+- `MEMORY.md`: stabiler aktueller Zustand, offene Entscheidungen, Risiken.
+- `TODO.md`: nur aktive offene Arbeit.
+- `CHANGELOG.md`: kuratierte nutzer-/operatorrelevante Aenderungen.
+- `agents/memory/daily/*`: chronologische Arbeits- und Incident-Historie.
+- Details stehen in `docs/policies/policy_docs_contract.md`.
 
 ## Nächste sinnvolle Ausbaustufen
 
@@ -242,3 +275,4 @@ sequenceDiagram
 2. Datenbank + Caching (Postgres/Prisma)
 3. Zeitraum-Filter / Vergleichsmodi
 4. Eigene Regel-Engine für Makro-Signale
+   Status: Grundstruktur vorhanden; neue Regeln koennen ueber die deklarative Rule-Registry in `apps/web/src/lib/macro-signal-rules.ts` erweitert werden.

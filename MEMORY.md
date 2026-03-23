@@ -1,35 +1,51 @@
 # MEMORY.md
 
 ## Current State
-- Repository enthält eine Next.js-App unter `apps/web` (`App Router`, `TypeScript`, `Tailwind v4`).
-- MVP-Dashboard lädt Markt-/Makrodaten aus Yahoo Finance und FRED (FRED nur mit `FRED_API_KEY`).
-- Charts werden mit `Recharts` gerendert.
-- Route Handler verfügbar unter `apps/web/src/app/api/dashboard/route.ts`.
-- P0-Basis abgesichert: Runtime-Validierung (`zod`) in Providern, `vitest`-Tests für Stats/Ableitungen, App Router `error.tsx` + `loading.tsx`.
-- Node-Version gepinnt via `apps/web/.nvmrc` und Minimal-CI (`.github/workflows/ci.yml`) für `lint`/`test`/`build` hinzugefügt.
-- README erweitert um Mermaid-Architekturdiagramm, MVP-Caching-Strategie und Rate-Limit-/Abuse-Schutz-Plan.
-- P2-Ausbau erweitert: zusätzliche FRED-Serien (`CPI`, `UNRATE`, `UST 2Y/10Y`, `IG OAS`, `HY OAS`) und neue Signale (Yield Curve, Inflation, Arbeitslosenquote, Credit-Regime) integriert.
-- Docker-Basis ergänzt (`apps/web/Dockerfile`, `docker-compose.yml`) mit `restart: unless-stopped` für stabilen Linux-Betrieb.
-- Audit-Checklisten in `docs/audits/` wurden auf konsistentes Namensschema umgestellt; umsetzbare Findings sind in `TODO.md` priorisiert.
+- Repository enthält eine Next.js-App unter `apps/web` (`App Router`, `TypeScript`, `Tailwind v4`) mit Makro-/Marktdaten aus Yahoo Finance und FRED.
+- Das Dashboard wird serverseitig aggregiert; der Route Handler liegt unter `apps/web/src/app/api/dashboard/route.ts`.
+- Die P0-Basis ist abgesichert: `zod`-Validierung in Providern, `vitest`-Tests für Stats/Ableitungen/Dashboard-Pipeline sowie App-Router-`error.tsx` und `loading.tsx`.
+- Node-Version ist über `apps/web/.nvmrc` gepinnt; Minimal-CI für `lint`/`test`/`build` ist vorhanden.
+- `apps/web` nutzt zusätzlich `Ultracite`/`Biome` für `npm run check` und `npm run fix`; `npm run lint` bleibt parallel aktiv.
+- Stand 2026-03-21: `npm test`, `npm run lint` und `npm run build` laufen in `apps/web` gruen. Bekannter Build-Hinweis bleibt die Next.js-Workspace-Root-Erkennung wegen `package-lock.json` im Root und in `apps/web`.
+- Docker-Basis ist mit `apps/web/Dockerfile` und `docker-compose.yml` für stabilen Linux-Betrieb vorhanden; die App wird lokal bewusst auf `127.0.0.1:3001` veröffentlicht.
+- `docker-compose.yml` setzt explizite DNS-Server (`1.1.1.1`, `8.8.8.8`), weil der Docker-Resolver zuvor externe Datenquellen zeitweise nicht sauber auflösen konnte.
+- Die Workbench nutzt sechs feste Auswahl-Zeilen, synchronisierte obere/untere Charts, gemeinsamen X-Bereich (`3M`, `6M`, `1Y`, `2Y`, `Max`) und pro Reihe steuerbare Y-/Log-Achsen.
+- Stand 2026-03-22: Die Workbench-Session persistiert zusaetzlich einen globalen `Daily`/`Weekly`-Chartmodus; obere und untere Charts projizieren dieselben Slot-Auswahlen nun wahlweise taeglich oder wochenweise, ohne die Slot-/Indicator-Engine oder Dropdown-Semantik zu aendern.
+- Die Workbench-Shell nutzt kein global erzwungenes One-Screen-Layout mehr; kleine Viewports stapeln Slot-Konfiguration und Charts vertikal, waehrend der manuelle Chart-Splitter nur noch auf `lg` aktiv ist.
+- Der visuelle Hover-Readout der Charts bleibt erhalten, erzeugt aber keine `aria-live`-Updates mehr bei jeder Mausbewegung; die Y-/`L`-Slot-Steuerung hat nun explizite zugaengliche Namen.
+- Stand 2026-03-21: Die fachliche Slot-/Indicator-Orchestrierung der Workbench liegt nicht mehr direkt in `apps/web/src/components/series-workbench.tsx`, sondern in `apps/web/src/lib/series-workbench-engine.ts`; die Client-Komponente konsumiert nun ein zusammenhaengendes Engine-Paket fuer `slotDescriptors`, Overlay-/Indicator-Reihen, Companion-Zuordnung und Divergenzmarker.
+- Stand 2026-03-21: Session-/Persistenzlogik der Workbench liegt nun in `apps/web/src/lib/use-series-workbench-session.ts`, waehrend Chart-Projection, X-Domain- und Achsenableitung in `apps/web/src/lib/series-workbench-chart.ts` zusammengefasst sind; `series-workbench.tsx` ist damit deutlich staerker auf Rendering und Slot-Interaktion reduziert.
+- Für Asset-Indikatoren sind aktuell nur `RSI Score` und `RSI Score W` vorgesehen; passende `RSI 14`-Companion-Reihen werden bei Score-Auswahl automatisch mitgerendert.
+- `RSI Score` ist ein um `50` zentrierter Divergenz-Score aus Preis-/RSI-Regressionen mit DEMA-Glättung; `RSI Score W` basiert auf Monday-aggregierten Weekly-OHLC.
+- Divergenzmarker werden auf dem Score-Indikator selbst gerendert; die Referenzfenster für BTCUSD wurden am 2026-03-11 gegen TradingView validiert.
+- Die Dashboard-Aggregation läuft nun über `apps/web/src/lib/dashboard-pipeline.ts`; `apps/web/src/lib/dashboard-data.ts` ist nur noch der schmale Einstieg mit `FRED_API_KEY`-Weitergabe, während die Pipeline selbst strukturierte Provider-/Slow-Fetch-Diagnostik über einen optionalen Callback emittieren kann.
+- Makro-Signal-Regeln liegen nun in `apps/web/src/lib/macro-signal-rules.ts` als explizite Rule-Registry; Schwellenwerte, Inputs und Signaltexte laufen dort deklarativ ueber gemeinsame Rule-Definitionen statt ueber einzelne Regel-Funktionen, waehrend `apps/web/src/lib/macro-derivations.ts` darauf aufbauend nur noch Signalableitung und Warnings kapselt.
+- Dashboard-Pipeline, Makro-Signal-Regelwerk und die Workbench-Engine-Orchestrierung wurden bereits auf schmalere Boundaries bzw. deklarative Rule-Definitionen geschnitten.
 
 ## Long-Term Memory
-- FRED benötigt lokalen API-Key in `apps/web/.env.local`.
-- S&P 500 Equal Weight wird aktuell über `RSP` (ETF) als Proxy modelliert.
-- Ziel ist Lernen + Verständnis: Architektur und Begriffe sind Teil des Outputs, nicht nur UI.
+- FRED benötigt einen lokalen API-Key in `apps/web/.env.local`.
+- S&P 500 Equal Weight wird aktuell über `RSP` als Proxy modelliert.
+- Ziel ist Lernen und Verständnis; Architektur und Begriffe sind Teil des Produkts, nicht nur die UI.
 - Nutzerpräferenz: Prinzipienverständnis vor Code; Erklärungen ohne Coding-Beispiele bevorzugt.
+- Sicherheitsregel: Bei Freischaltungen/Allowlists/Skills/Plugins nie von einzelnen Beispielen auf einen Voll-Enable schließen; es gilt nur der explizit genannte Scope.
+- Nutzerpräferenz: In diesem Repo ist der sinnvolle Einsatz von Subagents ausdrücklich gewünscht, wenn er klar abgegrenzte Teilaufgaben oder Parallelisierung verbessert.
+- Repo-lokale temporaere Arbeitsdateien unter `tmp/` werden über die Root-`.gitignore` ignoriert.
+- `openclaw/owui`-Hosts gehören zur separaten `ai_stack`-Topologie und sind kein stabiler MacroLens-Endpunkt.
 
 ## Open Decisions
-- Datenbank ja/nein (Caching/Historisierung) in späterem Schritt.
-- Welche zusätzlichen Serien als Nächstes rein sollen (z. B. CPI, ISM, HY Spreads, DXY, 10Y Yield).
-- Ob Nutzer später eigene Watchlists / Regime-Regeln konfigurieren können.
+- Ob und wann eine Datenbank für Caching/Historisierung eingeführt wird.
+- Welche zusätzlichen Makroserien als Nächstes priorisiert werden.
+- Ob spätere Nutzer eigene Watchlists oder Regime-Regeln konfigurieren können.
+- Wie strikt MacroLens mittelfristig Runbooks/Plans aus `docs/` statt Root-Dokumente nutzen soll.
 
 ## Known Risks
-- Yahoo-Datenquelle ist nicht offiziell stabil versioniert und kann sich ändern.
+- Yahoo ist keine offiziell stabil versionierte Datenquelle und kann sich ändern.
 - Unterschiedliche Frequenzen (daily vs monthly) erschweren direkte Vergleiche.
 - Einfache Heuristiken können in Sonderregimen irreführend sein.
+- Die Workbench ist entlang Engine-, Session-/Persistenz- und Chart-Projection-Grenzen geschnitten; verbleibende Komplexitaet sitzt primaer in den Render-Komponenten selbst.
+- Weekly-Chartmodus aggregiert candle-basierte Overlay-Reihen sowie RSI-Score-/RSI-Companion-Indikatoren auf Wochenstart; nicht-candle-basierte Makroreihen bleiben im Weekly-Modus auf ihren Originaldaten, um Datumsverschiebungen bei bereits groberen Frequenzen zu vermeiden.
 
 ## Next Steps
-- `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien prüfen.
-- `TODO.md` P2 weiter abarbeiten (DB/Caching, Observability, A11y, Deployment-Doku).
-- Optional: Caching/DB einführen (Postgres + Prisma).
-- Weitere Makro-Ableitungen/Regeln iterativ verfeinern (Schwellenwerte, Regime-Definitionen).
+- `FRED_API_KEY` in `apps/web/.env.local` setzen und FRED-Serien im laufenden Setup prüfen.
+- Naechster groesserer Workbench-Schritt liegt nun ausserhalb von P0; offen ist als naechstes Bundle B mit dem Strategy-Backtester.
+- Optional: Caching/DB einführen und Makro-Regeln schrittweise verfeinern.

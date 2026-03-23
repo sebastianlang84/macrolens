@@ -2,46 +2,54 @@ export type DataSource = "fred" | "yahoo";
 
 export type SeriesUnit = "index" | "usd" | "percent" | "thousand_persons";
 
-export type TimePoint = {
+export interface TimePoint {
   date: string;
   value: number;
-};
+}
 
-export type SeriesStats = {
-  latestValue: number | null;
+export interface CandlePoint {
+  close: number;
+  date: string;
+  high: number;
+  low: number;
+  open: number;
+}
+
+export interface SeriesStats {
   change1mPct: number | null;
-  change3mPct: number | null;
   change1yPct: number | null;
-};
+  change3mPct: number | null;
+  latestValue: number | null;
+}
 
-export type MacroSeries = {
+export interface MacroSeries {
+  candles?: CandlePoint[];
+  color: string;
+  description: string;
+  error?: string;
   key: string;
   label: string;
+  points: TimePoint[];
+  proxyNote?: string;
   shortLabel: string;
   source: DataSource;
-  unit: SeriesUnit;
-  description: string;
-  proxyNote?: string;
-  points: TimePoint[];
-  color: string;
   stats: SeriesStats;
-  error?: string;
-};
+  unit: SeriesUnit;
+}
 
 export type SignalTone = "positive" | "neutral" | "negative";
 
-export type MacroSignal = {
+export interface MacroSignal {
   id: string;
   label: string;
+  summary: string;
   tone: SignalTone;
   value: string;
-  summary: string;
-};
+}
 
-export type DashboardData = {
+export interface DashboardData {
   generatedAt: string;
   series: MacroSeries[];
   signals: MacroSignal[];
   warnings: string[];
-};
-
+}
